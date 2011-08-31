@@ -1,5 +1,4 @@
 var arr = [
-    0, 12,
     1, 10,
     2, 8,
     3, 13,
@@ -12,7 +11,17 @@ var arr = [
     10, 8
 ];
 
+arr = (function( seed, length, max ){
+    var arr = [];
+    max = max || 100;
+    for( var i = seed; i < length; i++ ){
+        arr.push( i, Math.floor( Math.random() * 100 ) );
+    }
+    return arr;
+})( 0, 70 );
+
 function webGLStart() {
+    
     function prepareData( arr ){
         var z = 0, i = 0, cleanArr = [];
         for( i = 0; i < arr.length; i = i + 1 ){
@@ -28,18 +37,32 @@ function webGLStart() {
         cleanArr.push( z );
         cleanArr.push( arr[ arr.length - 2 ], 0, 0 );
 
-        return cleanArr;
+        return injectPoints( cleanArr );
     }
+
+    //Inject points so every point is ( start, pt, end )
+    function injectPoints( arr ){
+
+        var ret = [];
+
+        for( var i = 0, l = arr.length / 3; i < l; i = i + 1 ){
+            ret.push( arr[ i*3 ], 0, arr[ i*3 + 2 ],
+                    arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ]);
+        }
+
+        return ret;
+    }
+    
     var matrix = prepareData( arr ),
-        iindices = Math.floor( matrix.length / 3 );
+        iindices = Math.floor( matrix.length / 3 ),
+        indices = [];//prepareIndices( matrix );
 
     var graph = new PhiloGL.O3D.Model({
         vertices: matrix,
         colors: [ 1, 0, 0, 1 ],
-        indices: [ ]//0, 3, iindices - 2 ]
+        indices: []//indices
 
     });
-
 
     PhiloGL('canvas', {
         program: {
@@ -55,7 +78,7 @@ function webGLStart() {
             var gl = app.gl,
                 canvas = app.canvas,
                 program = app.program,
-                camera = app.camera,
+                camera = new PhiloGL.Camera( 45, .4/*canvas.width / canvas.height*/, 0.1, 1000 ),//app.camera,
                 view = new PhiloGL.Mat4(),
                 rTri = 0, rSquare = 0;
 
@@ -88,11 +111,14 @@ function webGLStart() {
                 program.setUniform('uPMatrix', camera.projection);
             }
             console.log( 'Rendered: ', Math.floor( graph.$verticesLength / 3 ) * 3 );
+            var camx = -33, camy = -80, camz = -200;
             function drawScene(){
 
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
                 //Draw triangle
-                graph.position.set(-10, -6, -20);
+                //camy = camy - 0.1;
+                //console.log( camx, camy, camz );
+                graph.position.set(camx, camy, camz);
                 graph.rotation.set(0, rTri, 0);
                 setupElement( graph );
                 program.setBuffer('graph');
@@ -103,27 +129,8 @@ function webGLStart() {
                     bufferType: gl.ELEMENT_ARRAY_BUFFER,
                     size: 1
                 });
-                gl.drawElements( gl.TRIANGLE_STRIP, graph.indices.length, gl.UNSIGNED_SHORT, 0 );
+                gl.drawElements( gl.TRIANGLES, graph.indices.length, gl.UNSIGNED_SHORT, 0 );
 
-                // program.setBuffer('indices', {
-                //     value: triangle.indices,
-                //     bufferType: gl.ELEMENT_ARRAY_BUFFER,
-                //     size: 1
-                // });
-                // gl.drawElements(gl.TRIANGLES, triangle.indices.length, gl.UNSIGNED_SHORT,0);
-
-                //Draw square
-                //square.position.set(1.5, 0, -7);
-                //square.rotation.set(rSquare, 0, 0);
-                //setupElement( square );
-                //gl.drawArrays( gl.TRIANGLES, 0, triangle.$verticesLength / 3 );
-                //These needed for cube
-                // program.setBuffer('indices', {
-                //     value: square.indices,
-                //     bufferType: gl.ELEMENT_ARRAY_BUFFER,
-                //     size: 1
-                // });
-                // gl.drawElements(gl.TRIANGLES, square.indices.length, gl.UNSIGNED_SHORT, 0);
             }
 
             function animate(){
