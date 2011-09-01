@@ -11,6 +11,7 @@ body{
 <body onload="webGLStart()">
 <div id="content">
     <canvas id="canvas" width="800" height="600">Your browser doesn't support canvas.</canvas>
+<div id="rendered"></div>
 </div>
 </body>
 
@@ -23,6 +24,7 @@ body{
 
     void main(void) {
       //gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    
       gl_FragColor = vColor;
     }
 </script>
@@ -38,6 +40,7 @@ body{
   void main(void) {
     gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
     vColor = aVertexColor;
+
   }
 </script>
 <script src=PhiloGL.js></script>
