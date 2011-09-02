@@ -5,13 +5,17 @@ var $ =
     }, 
     ap = Array.prototype.push,
     arr = [];
+//Prevent errors
+if( !window.console ){
+    window.console = {};
+    window.console.log = function(){};
+}
 
 function generatePoints( seed, length, max ){
     var arr = [];
     max = max || 100;
     seed = seed || 0;
-    length = length || 500;
-    //length = 11;
+    length = length*10 || 400;
 
     for( var i = seed; i < length; i=i+10 ){
         arr.push( i, Math.floor( Math.random() * max ) );
@@ -33,12 +37,11 @@ function normalizeArray( arr ){
         arr[ i + 1 ] = arr[ i + 1 ] * 300 / maxy;
         arr[ i ] = arr[ i ] * 400 / maxx;
     }
-    maxx = 400;
+    maxx = 375;
     maxy = 300;
     return arr;
 }
 
-//arr = [0, 95, 1, 61, 2, 91, 3, 12, 4, 87, 5, 0, 6, 89, 7, 34, 8, 11, 9, 7, 10, 41, 11, 66, 12, 29, 13, 57, 14, 97, 15, 54, 16, 71, 17, 65, 18, 35, 19, 78, 20, 6, 21, 44, 22, 84, 23, 9, 24, 26, 25, 0, 26, 1, 27, 24, 28, 58, 29, 46, 30, 96, 31, 73, 32, 90, 33, 92, 34, 74, 35, 60, 36, 3, 37, 57, 38, 40, 39, 83, 40, 78, 41, 64, 42, 65, 43, 29, 44, 59, 45, 53, 46, 69, 47, 29, 48, 41, 49, 92, 50, 72, 51, 6, 52, 57, 53, 9, 54, 41, 55, 20, 56, 51, 57, 55, 58, 89, 59, 67, 60, 14, 61, 36, 62, 35, 63, 45, 64, 2, 65, 69, 66, 81, 67, 11, 68, 35, 69, 94];
 //Convert 2 wide matrix to 3 wide matrix, z = 0
 function prepareData( arr, z ){
     var i = 0, cleanArr = [];
@@ -48,6 +51,7 @@ function prepareData( arr, z ){
     for( i = 0; i < arr.length; i = i + 1 ){
         if( i && i % 2 === 0 ){
             cleanArr.push( z );
+            //console.log( cleanArr[ cleanArr.length - 3], cleanArr[ cleanArr.length - 2],cleanArr[ cleanArr.length - 1 ] ); 
         }
 
         cleanArr.push ( arr[i] );
@@ -65,6 +69,7 @@ function bezier( a, b, c, d, t ){
 function bezier3( a, b, c, d, t, dest ){
     if( dest == null ) dest = [];
     var x = bezier(a[0], b[0], c[0], d[0], t);
+    //Inject a y=0 axis point prior to calculated point
     dest.push( x );
     dest.push( 0 );
     dest.push( 0 ); //sigh hard coded z axis
@@ -118,6 +123,7 @@ function faux( a, b, enda, endb ){
 }
 
 //Inject points so every point is ( start, pt, end )
+//Prefix every point with a point on the y=0 axis
 function injectPoints( arr ){
 
     var ret = [], prev, current,
@@ -125,7 +131,7 @@ function injectPoints( arr ){
     
     for( var i = 0, l = arr.length / 3; i < l; i = i + 1 ){
         current = [ arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ] ];
-        if( i > 0 ){
+        if( false &&i > 0 ){
             value = faux( prev, current, i === 1, i === l  );
             ap.apply( ret, value );
         }
@@ -137,32 +143,87 @@ function injectPoints( arr ){
     return ret;
 }
 
-function prepareIndices( iindices ){
-    var ret = [], i = 0;
-    for( ; i < iindices; i = i + 4 ){
+//Create indices between necessary points
+//If double create links to the mirror image at z=z+1
+function prepareIndices( iindices, dbl ){
+    var ret = [], i = 0, half = Math.floor( iindices/2 ), temp;
 
-        ret.push( i, i + 1, i + 3 );
-        ret.push( i + 1, i + 2, i + 3 );
+
+    //Connect Z facing graphs
+    for( ; i < iindices; i = i + 2 ){
+
+        //ret.push( i, i + 1, i + 3 );
+        //ret.push( i, i + 2, i + 3 );
+    }
+
+    //If a block, must connect side, top, bottom sides of graph
+    if( dbl ){
+        //Connect start and finish of points
+        ret.push( 0, 1, iindices - 2 );
+        ret.push( 1, iindices - 2, iindices - 1 );
+
+        for( i = 0; i < half ; i = i + 1 ){
+
+            temp = iindices - i - 4; //Less math
+            if( i % 2 ){
+                temp = temp + 2;
+            }
+            ret.push( i, i + 2, temp );
+            ret.push( i, temp, temp + 2 );
+            console.log( i, i + 2, temp );
+            console.log( i, temp, temp + 2 );
+        }
+        //ret.push( half - 1, half + 1, half - 2 );
+        //ret.push( half, half + 1, half - 2 );
+
     }
 
     return ret;
 }
 
-
+//Generate a new model based on data
 function generateModel(){
-    var matrix = prepareData( generatePoints() ),
-        iindices = Math.floor( matrix.length / 3 ),
-        indices = prepareIndices( iindices );
+    var matrix = prepareData( generatePoints(0,4) ),
+        iindices,// = Math.floor( matrix.length / 3 ),
+        indices;// = prepareIndices( iindices );
 
+    //Make a copy of the data at z-1
+    for( var l = matrix.length - 1; ~l ;l = l - 6 ){
+        matrix.push( matrix[l-2-3], matrix[l-1-3], matrix[l-3] - 100 );
+        matrix.push( matrix[l-2], matrix[l-1], matrix[l] - 100 );
+    }
+    console.log( matrix );
+
+    iindices = Math.floor( matrix.length / 3 );
+    indices = prepareIndices( iindices, true );
+    //Debug matrices and indices
+    // for( var i = 0; i < matrix.length; i = i + 3 ){
+    //     console.log( i/3 + ':', matrix[i], matrix[i+1], matrix[i+2] );
+    // }
+    // for( var i = 0; i < indices.length; i = i + 3 ){
+    //     console.log( indices[i], indices[i+1], indices[i+2] );
+    // }
+
+    var colors = [];
+    for( var i = 0; i < matrix.length; i = i + 3 ){
+        if( i < matrix.length / 2 ){
+            colors.push( 1, 0, 0, 1 );
+        } else {
+            colors.push( 0, 1, 0, 1 );
+        }
+    }
     return new PhiloGL.O3D.Model({
         vertices: matrix,
-        colors: [ 1, 0, 0, 1 ],
+        colors: colors,
         indices: indices
     });
 }
 
 function updatePosition( graph ){
-    graph.position.set( -maxx/2 + 15, -maxy*2/3 - 15, graph.position.z );
+
+    //graph.position.set( -maxx/2 + 15, -maxy*2/3 - 15, graph.position.z );
+    //Still can't seem to automatically determine this so using normalize to control it
+    graph.position.set( -180, -215, graph.position.z );
 }
 
 
@@ -191,12 +252,11 @@ window.webGLStart = function() {
                 canvas = app.canvas,
                 program = app.program,
                 scene = app.scene,
-                //camera = app.camera,
                 view = new PhiloGL.Mat4(),
                 rTri = 0, rSquare = 0,
                 camera = new PhiloGL.Camera( 45, 1, 10, 0, {
                 position: {
-                    x: 0, y: 0, z: -(Math.max( maxx, maxy ) )*1.3
+                    x: 0, y: 0, z: -(400 )*1.3
                 }
             });
 
@@ -204,9 +264,9 @@ window.webGLStart = function() {
 
             gl.viewport(0, 0, canvas.width, canvas.height);
             gl.clearColor( 211/255, 200/255, 184/255, 1);
-            gl.clearDepth(1);
-            gl.enable(gl.DEPTH_TEST);
-            gl.depthFunc(gl.LEQUAL);
+            gl.clearDepth( 1 );
+            gl.enable (gl.DEPTH_TEST );
+            gl.depthFunc( gl.LEQUAL );
 
             //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             camera.view.id();
@@ -237,13 +297,10 @@ window.webGLStart = function() {
 
             scene.add( graph );
 
-
             function drawScene(){
 
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
 
-                graph.update();
-                camera.update();
                 setupElement( graph );
                 program.setBuffer('graph');
                 gl.drawArrays( gl.TRIANGLE_STRIP, 0,
@@ -254,10 +311,14 @@ window.webGLStart = function() {
                     bufferType: gl.ELEMENT_ARRAY_BUFFER,
                     size: 1
                 });
+
                 gl.drawElements( 
                     gl.TRIANGLES, 
                     graph.indices.length, 
                     gl.UNSIGNED_SHORT, 0 );
+                graph.update();
+                camera.update();
+
             }
 
             (function tick(){
@@ -273,6 +334,7 @@ window.webGLStart = function() {
                     x: e.x,
                     y: e.y
                 };
+                console.log( 'Mouse', e.x, 'Graph', this.scene.models[0].position.x, 'Camera', this.camera.aspect );
                 this.dragging = true;
             },
             onDragCancel: function(){
@@ -281,22 +343,35 @@ window.webGLStart = function() {
             },
             onDragMove: function(e) {
                 var z = this.camera.position.z,
+                    camera = this.camera,
                     sign = Math.abs(z) / z,
                     pos = this.pos,
                     x = -(pos.x - e.x) / 100,
                     y = sign * (pos.y - e.y) / 100,
                     graph = this.scene.models[0];
 
-                graph.position.x += (pos.x - e.x) / this.scene.camera.aspect;
-                graph.position.y += -(pos.y - e.y);
+                //Due to aspect ratio manipulations X must be calculated based 
+                // this aspect ratio;
+                // The needed ratio comes out to:
+                // -2.3136792453 @ 1
+                // -2.3061583578 @ 0.8
+                // -2.3294117647 @ 0.4
 
+                if( !e.event.ctrlKey ){
+                    graph.position.x += (pos.x - e.x) * camera.aspect / 2.3136792;
+                    graph.position.y += -(pos.y - e.y);
+                } else {
+                    graph.rotation.x += -(pos.y - e.y)/100;
+                    graph.rotation.y += -(pos.x - e.x)/100;
+                }
                 pos.x = e.x;
                 pos.y = e.y;
+                                        
             },
-            onDragEnd: function(){
-
+            onDragEnd: function(e){
+                console.log( 'Mouse', e.x, 'Graph', this.scene.models[0].position.x, 'Camera', this.camera.aspect );
                 this.dragging = false;
-                console.log( this.pos.y );
+
             },
             onMouseWheel: function(e) {
                 e.stop();
@@ -306,9 +381,10 @@ window.webGLStart = function() {
                 camera.aspect -= e.wheel * .1;
                 if( camera.aspect <= 0.01 ){
                     camera.aspect = 0.01; }
-                if( camera.aspect > 1.9 ){
-                    camera.aspect = 1.9;
+                if( camera.aspect > 2.5 ){
+                    camera.aspect = 2.5;
                 }
+                console.log( 'Aspect Ratio:', camera.aspect );
             }
         }
 
