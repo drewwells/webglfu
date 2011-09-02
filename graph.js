@@ -19,17 +19,40 @@ var $ = function( id ){
 arr = (function( seed, length, max ){
     var arr = [];
     max = max || 100;
-    for( var i = seed; i < length; i++ ){
+    for( var i = seed; i < length; i=i+10 ){
         arr.push( i, Math.floor( Math.random() * 100 ) );
     }
     return arr;
-})( 0, 70 );
+})( 0, 700 );
+
+
+var maxx = Math.max.apply(Math,arr.filter(function(n,i){ return !(i%2); })),
+    maxy = Math.max.apply(Math,arr.filter(function(n,i){ return i%2; }));
+
+for( var i = 0,l = arr.length; i < l; i = i + 2 ){
+
+    arr[ i ] = arr[ i ] * 400 / maxx;
+}
+maxx = 400;
+
 
 //arr = [0, 95, 1, 61, 2, 91, 3, 12, 4, 87, 5, 0, 6, 89, 7, 34, 8, 11, 9, 7, 10, 41, 11, 66, 12, 29, 13, 57, 14, 97, 15, 54, 16, 71, 17, 65, 18, 35, 19, 78, 20, 6, 21, 44, 22, 84, 23, 9, 24, 26, 25, 0, 26, 1, 27, 24, 28, 58, 29, 46, 30, 96, 31, 73, 32, 90, 33, 92, 34, 74, 35, 60, 36, 3, 37, 57, 38, 40, 39, 83, 40, 78, 41, 64, 42, 65, 43, 29, 44, 59, 45, 53, 46, 69, 47, 29, 48, 41, 49, 92, 50, 72, 51, 6, 52, 57, 53, 9, 54, 41, 55, 20, 56, 51, 57, 55, 58, 89, 59, 67, 60, 14, 61, 36, 62, 35, 63, 45, 64, 2, 65, 69, 66, 81, 67, 11, 68, 35, 69, 94];
 
 
 function webGLStart() {
-    
+    var ap = Array.prototype.push,
+        matrix = prepareData( arr ),
+        iindices = Math.floor( matrix.length / 3 ),
+        indices = prepareIndices( iindices ),
+        theta = 0,
+        icamera = 1,
+        graph = new PhiloGL.O3D.Model({
+            vertices: matrix,
+            colors: [ 1, 0, 0, 1 ],
+            indices: indices
+        }), pos;
+
+
     function prepareData( arr ){
         var z = 0, i = 0, cleanArr = [];
         for( i = 0; i < arr.length; i = i + 1 ){
@@ -61,14 +84,14 @@ function webGLStart() {
         dest.push( 0 );
         return dest;
     }
-    var ap = Array.prototype.push;
+
     function faux( a, b, enda, endb ){
         //Make control points, okay?
         var ret = [],
             cp1 = [ ],
             cp2 = [ ],
-            dx = 0.25 * ( b[0] - a[0] ),
-            dy = 0.25 * ( b[1] - a[1] );
+            dx = 0.4 * ( b[0] - a[0] ),
+            dy = 0.4 * ( b[1] - a[1] );
 
         //endpoints controlpoint dy
         if( enda ){
@@ -93,8 +116,8 @@ function webGLStart() {
 
         for( var i = 1, count = 500; i < count; i++ ){
             var t = i / ( count - 1 );
-            ap.apply( ret, bezier3( 
-                a, 
+            ap.apply( ret, bezier3(
+                a,
                 cp1,
                 cp2,
                 b,
@@ -107,7 +130,7 @@ function webGLStart() {
     function injectPoints( arr ){
 
         var ret = [], prev, current;
-        //arr = bezier( arr );        
+        //arr = bezier( arr );
         for( var i = 0, l = arr.length / 3; i < l; i = i + 1 ){
             current = [ arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ] ];
             if( i > 0 ){
@@ -121,26 +144,15 @@ function webGLStart() {
     }
 
     function prepareIndices( iindices ){
-        var ret = [];
-        for( var i = 0; i < iindices; i = i + 4 ){
+        var ret = [], i = 0;
+        for( ; i < iindices; i = i + 4 ){
+
             ret.push( i, i + 1, i + 3 );
             ret.push( i + 1, i + 2, i + 3 );
         }
 
         return ret;
     }
-    
-    var matrix = prepareData( arr ),
-        iindices = Math.floor( matrix.length / 3 ),
-        indices = prepareIndices( iindices ),
-        theta = 0;
-
-    var graph = new PhiloGL.O3D.Model({
-        vertices: matrix,
-        colors: [ 1, 0, 0, 1 ],
-        indices: indices
-
-    }), pos;
 
     PhiloGL('canvas', {
         program: {
@@ -150,13 +162,16 @@ function webGLStart() {
         },
         events: {
             onDragStart: function(e) {
+
                 this.pos = {
                     x: e.x,
                     y: e.y
                 };
                 this.dragging = true;
+                console.log( this.scene.models[0].position.x, this.pos.x );
             },
             onDragCancel: function(){
+
                 this.dragging = false;
             },
             onDragMove: function(e) {
@@ -167,28 +182,34 @@ function webGLStart() {
                     y = sign * (pos.y - e.y) / 100,
                     graph = this.scene.models[0];
 
-                graph.position.x += (pos.x - e.x) * this.camera.aspect / 2;
-                graph.position.y += -(pos.y - e.y) / 2;
-                graph.update();
+                console.log( this );
+                graph.position.x += (pos.x - e.x) / this.scene.camera.aspect;
+                graph.position.y += -(pos.y - e.y);
 
                 pos.x = e.x;
                 pos.y = e.y;
             },
             onDragEnd: function(){
-                theta = this.scene.models[0].rotation.y;
+
+                console.log( this.scene.models[0].position.x, this.pos.x );
                 this.dragging = false;
             },
             onMouseWheel: function(e) {
                 e.stop();
                 var camera = this.camera;
 
-                camera.position.z += e.wheel * 100;
-                camera.update();
+                //camera.position.z += e.wheel * 100;
+                camera.aspect -= e.wheel * .1;
+                if( camera.aspect <= 0.01 ){
+                    camera.aspect = 0.01; }
+                if( camera.aspect > 1.9 ){
+                    camera.aspect = 1.9;
+                }
             }
         },
         onError: function() {
-            console.log( this, arguments );
 
+            console.log( this, arguments );
         },
         onLoad: function(app) {
             var gl = app.gl,
@@ -198,9 +219,9 @@ function webGLStart() {
                 //camera = app.camera,
                 view = new PhiloGL.Mat4(),
                 rTri = 0, rSquare = 0,
-                camera = new PhiloGL.Camera( 45, 0.1, 10, -1000, {
+                camera = new PhiloGL.Camera( 45, 1, 10, 0, {
                 position: {
-                    x: 100, y: -100, z: -500
+                    x: 0, y: 0, z: -(Math.max( maxx, maxy ) )*1.3
                 }
             });
             app.camera = camera;
@@ -210,11 +231,12 @@ function webGLStart() {
             gl.clearDepth(1);
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
-            
+
             //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             camera.view.id();
 
             function setupElement( elem ){
+
                 //update element matrix
                 elem.update();
                 //get new view matrix out of element and camera matrices
@@ -233,36 +255,34 @@ function webGLStart() {
                 program.setUniform('uMVMatrix', view);
                 program.setUniform('uPMatrix', camera.projection);
             }
-            $( 'rendered' ).innerHTML = 'Vertice Count: ' + Math.floor( graph.$verticesLength / 3 ) * 3;
 
+            $( 'rendered' ).innerHTML = 'Vertice Count: ' + 
+                Math.floor( graph.$verticesLength / 3 ) * 3;
 
-            var camy = 0;
             scene.add( graph );
-                graph.position.set( -50, -80, 0 );
-            function drawScene(){
-                //scene.add( graph );
 
+            graph.position.set( -maxx/2, -maxy*2, graph.position.z );
+            console.log( graph.position.x );
+            function drawScene(){
 
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-                // if( !app.dragging ){
-                //     theta += 0.005;
-                //     graph.rotation.set(0, theta, 0);
-                // }
+
                 graph.update();
                 camera.update();
                 setupElement( graph );
                 program.setBuffer('graph');
-                gl.drawArrays( gl.TRIANGLE_STRIP, 0, 
+                gl.drawArrays( gl.TRIANGLE_STRIP, 0,
                                Math.floor( graph.$verticesLength / 3 ) );
-                
+
                 program.setBuffer('indices', {
                     value: graph.indices,
                     bufferType: gl.ELEMENT_ARRAY_BUFFER,
                     size: 1
                 });
-                gl.drawElements( gl.TRIANGLES, graph.indices.length, gl.UNSIGNED_SHORT, 0 );
-                //scene.render();
-
+                gl.drawElements( 
+                    gl.TRIANGLES, 
+                    graph.indices.length, 
+                    gl.UNSIGNED_SHORT, 0 );
             }
 
             (function tick(){
@@ -270,7 +290,6 @@ function webGLStart() {
                 drawScene();
                 setTimeout(tick,1000/24);
             })();
-            //drawScene();
         }
     });
 }
