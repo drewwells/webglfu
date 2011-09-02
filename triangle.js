@@ -1,13 +1,11 @@
 
 function webGLStart() {
-    var z = 0, i = 0;
-    var palette = [
-        [ 107/255, 67/255, 22/255, 1 ],
-        [ 161/255, 96/255, 24/255, 1 ],
-        [ 18/255, 115/255, 101/255, 1 ],
-        [ 36/255, 176/255, 138/255, 1 ],
-        [ 171/255, 173/255, 84/255, 1 ]
-    ];
+    var z = 0, i = 0,
+        palette = [
+            [ 201/255, 96/255, 78/255, 1 ],
+            [ 161/255, 59/255, 74/255, 1 ],
+            [ 115/255, 42/255, 86/255, 1 ]
+        ];
 
     //Red/Blue/Green array
     // [
@@ -43,22 +41,22 @@ function webGLStart() {
 
     ap.push.apply( colorArr, palette[0] );//bottom
     ap.push.apply( colorArr, palette[0] );
-    ap.push.apply( colorArr, palette[3] );
-    ap.push.apply( colorArr, palette[3] );
+    ap.push.apply( colorArr, palette[2] );
+    ap.push.apply( colorArr, palette[2] );
 
     ap.push.apply( colorArr, palette[1] );//left
     ap.push.apply( colorArr, palette[1] );
-    ap.push.apply( colorArr, palette[3] );
-    ap.push.apply( colorArr, palette[3] );
+    ap.push.apply( colorArr, palette[2] );
+    ap.push.apply( colorArr, palette[2] );
 
     ap.push.apply( colorArr, palette[1] );//front
     ap.push.apply( colorArr, palette[0] );
-    ap.push.apply( colorArr, palette[3] );
+    ap.push.apply( colorArr, palette[2] );
 
     ap.push.apply( colorArr, palette[1] );//back
     ap.push.apply( colorArr, palette[0] );
-    ap.push.apply( colorArr, palette[3] );
-console.log( colorArr );
+    ap.push.apply( colorArr, palette[2] );
+
     var triangle = new PhiloGL.O3D.Model({
         colors: colorArr,
 
@@ -88,22 +86,19 @@ console.log( colorArr );
                    -1, -1, -1 
                   ],
         //Define triangles to fill squares above
-        indices: [ 0, 1, 2,  0, 2, 3, //right
-                   4, 6, 7,  4, 5, 6, //bottom
-
-                    8,10,11,  8, 9,10, //left
-                   10,12,9,
-                   12,13,14, //front
-                   15,16,17 //back
-                 ],
-
-
+        indices: [  0,  1, 2,  0, 2,  3, //right
+                    4,  6, 7,  4, 5,  6, //bottom
+                    8, 10, 11, 8, 9, 10, //left
+                   10, 12, 9,
+                   12, 13, 14, //front
+                   15, 16, 17 //back
+                 ]
     }),
     square = new PhiloGL.O3D.Model({
-        vertices: [1, 1, 0, 
+        vertices: [ 1, 1, 0, 
                    -1, 1, 0, 
-                   1, -1, 0, 
-                   -1, -1, 0],
+                    1, -1, 0, 
+                   -1, -1, 0 ],
         colors: [0.5, 0.5, 1, 1, 
                  0.5, 0.5, 1, 1, 
                  0.5, 0.5, 1, 1, 
@@ -113,34 +108,35 @@ console.log( colorArr );
 
     square = new PhiloGL.O3D.Model({
         vertices: [-1, -1,  1,
-                   1, -1,  1,
-                   1,  1,  1,
+                    1, -1,  1,
+                    1,  1,  1,
                    -1,  1,  1,
 
                    -1, -1, -1,
                    -1,  1, -1,
-                   1,  1, -1,
-                   1, -1, -1,
+                    1,  1, -1,
+                    1, -1, -1,
 
                    -1,  1, -1,
                    -1,  1,  1,
-                   1,  1,  1,
-                   1,  1, -1,
+                    1,  1,  1,
+                    1,  1, -1,
 
                    -1, -1, -1,
-                   1, -1, -1,
-                   1, -1,  1,
+                    1, -1, -1,
+                    1, -1,  1,
                    -1, -1,  1,
 
-                   1, -1, -1,
-                   1,  1, -1,
-                   1,  1,  1,
-                   1, -1,  1,
+                    1, -1, -1,
+                    1,  1, -1,
+                    1,  1,  1,
+                    1, -1,  1,
 
                    -1, -1, -1,
                    -1, -1,  1,
                    -1,  1,  1,
-                   -1,  1, -1],
+                   -1,  1, -1
+                  ],
         indices: [0, 1, 2, 0, 2, 3,
                   4, 5, 6, 4, 6, 7,
                   8, 9, 10, 8, 10, 11,
@@ -183,16 +179,17 @@ console.log( colorArr );
             alert("An error ocurred while loading the application");
         },
         onLoad: function(app) {
+
             var gl = app.gl,
                 canvas = app.canvas,
                 program = app.program,
                 camera = app.camera,
                 view = new PhiloGL.Mat4(),
-                rTri = 0, rSquare = 0;
+                rTri = 0;
 
             gl.viewport(0, 0, canvas.width, canvas.height);
-            gl.clearColor(0, 0, 0, 1);
-            gl.clearDepth(1);
+            gl.clearColor( 97/255, 112/255, 88/255, 1);
+            gl.clearDepth( 1 );
             gl.enable(gl.DEPTH_TEST);
             gl.depthFunc(gl.LEQUAL);
             
@@ -224,8 +221,8 @@ console.log( colorArr );
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
 
                 //Draw triangle
-                triangle.position.set(-3, 0, -10);
-                triangle.rotation.set(0, rTri, 0);
+                triangle.position.set(0, 0, -4);
+                triangle.rotation.set(0.25*rTri, rTri, 0);
                 setupElement( triangle );
                 program.setBuffer('triangle');
                 gl.drawArrays( gl.TRIANGLES, 0, Math.floor( triangle.$verticesLength / 3 ));
@@ -236,23 +233,11 @@ console.log( colorArr );
                 });
                 gl.drawElements(gl.TRIANGLES, triangle.indices.length, gl.UNSIGNED_SHORT,0);
 
-                //Draw square
-                //square.position.set(1.5, 0, -7);
-                //square.rotation.set(rSquare, 0, 0);
-                //setupElement( square );
-                //gl.drawArrays( gl.TRIANGLES, 0, triangle.$verticesLength / 3 );
-                //These needed for cube
-                // program.setBuffer('indices', {
-                //     value: square.indices,
-                //     bufferType: gl.ELEMENT_ARRAY_BUFFER,
-                //     size: 1
-                // });
-                // gl.drawElements(gl.TRIANGLES, square.indices.length, gl.UNSIGNED_SHORT, 0);
             }
 
             function animate(){
                 rTri = rTri + 0.02;
-                rSquare = rSquare + 0.1;
+
             }
             (function tick(){
 
