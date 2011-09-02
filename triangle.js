@@ -1,48 +1,67 @@
-var arr = [ 
-    0, 0,
-    1, 10,
-    1, 0,
-        2, 8,
-    2, 0,
-    3, 13,
-    3, 0,
-    4, 7,
-    4, 0,
-    5, 12,
-    5, 0,
-    6, 6,
-    6, 0,
-    7, 8,
-    7, 0,
-    8, 12,
-    8, 0,
-    9, 4,
-    9, 0,
-    10, 8,
-    10, 0
-          ];
-
-
 
 function webGLStart() {
-    var z = 0, i = 0, cleanArr = [];
-    for( i = 0; i < arr.length; i = i + 1 ){
+    var z = 0, i = 0;
+    var palette = [
+        [ 107/255, 67/255, 22/255, 1 ],
+        [ 161/255, 96/255, 24/255, 1 ],
+        [ 18/255, 115/255, 101/255, 1 ],
+        [ 36/255, 176/255, 138/255, 1 ],
+        [ 171/255, 173/255, 84/255, 1 ]
+    ];
 
-        if( i && i % 2 === 0 ){
-            cleanArr.push( z );
-        }
+    //Red/Blue/Green array
+    // [
+    //          1, 0, 0, 1, //right
+    //          1, 0, 0, 1, 
+    //          0, 1, 0, 1,
+    //          0, 1, 0, 1,
 
-        cleanArr.push ( arr[i] );
-    }
+    //          0, 1, 0, 1, //bottom
+    //          0, 1, 0, 1, 
+    //          0, 0, 1, 1,
+    //          0, 0, .5, 1,
 
-    if( i && i % 2 === 0 ){ cleanArr.push( z ); }
+    //          1, 0, 0, 1, //left
+    //          1, 0, 0, 1, 
+    //          0, 0, .5, 1,
+    //          0, 0, .5, 1,
 
-    var graph = new PhiloGL.O3D.Model({
-        vertices: cleanArr,
-        colors: [ 1, 0, 0, 1 ]
+    //          1, 0, 0, 1, //front
+    //          0, 1, 0, 1, 
+    //          0, 0, 1, 1,
 
-    });
+    //          1, 0, 0, 1, //back
+    //          0, 1, 0, 1, 
+    //          0, 0, 1, 1
+    //         ],
+
+    var colorArr = [],ap = Array.prototype;
+    ap.push.apply( colorArr, palette[1] );//right
+    ap.push.apply( colorArr, palette[1] );
+    ap.push.apply( colorArr, palette[0] );
+    ap.push.apply( colorArr, palette[0] );
+
+    ap.push.apply( colorArr, palette[0] );//bottom
+    ap.push.apply( colorArr, palette[0] );
+    ap.push.apply( colorArr, palette[3] );
+    ap.push.apply( colorArr, palette[3] );
+
+    ap.push.apply( colorArr, palette[1] );//left
+    ap.push.apply( colorArr, palette[1] );
+    ap.push.apply( colorArr, palette[3] );
+    ap.push.apply( colorArr, palette[3] );
+
+    ap.push.apply( colorArr, palette[1] );//front
+    ap.push.apply( colorArr, palette[0] );
+    ap.push.apply( colorArr, palette[3] );
+
+    ap.push.apply( colorArr, palette[1] );//back
+    ap.push.apply( colorArr, palette[0] );
+    ap.push.apply( colorArr, palette[3] );
+console.log( colorArr );
     var triangle = new PhiloGL.O3D.Model({
+        colors: colorArr,
+
         vertices: [
             //right
                    0, 1, 0, //tl
@@ -55,52 +74,30 @@ function webGLStart() {
                    -1, -1, -1,//br
                    -1, -1, 0, //bl
             //left
-            //        0, 1, -1,
-            //        0, 1, 0,
-            //        -1, -1, 0,
-            //        -1, -1, -1,
-            // //front
-            //        0, 1, 0, 
-            //        1, -1, 0,
-            //        -1, -1, 0, 
-            // //back
-            //        0, 1, -1, 
-            //        1, -1, -1,
-            //        -1, -1, -1 
+                   0, 1, -1,
+                   0, 1, 0,
+                   -1, -1, 0,
+                   -1, -1, -1,
+            //front
+                   0, 1, 0, 
+                   1, -1, 0,
+                   -1, -1, 0, 
+            //back
+                   0, 1, -1, 
+                   1, -1, -1,
+                   -1, -1, -1 
                   ],
         //Define triangles to fill squares above
         indices: [ 0, 1, 2,  0, 2, 3, //right
                    4, 6, 7,  4, 5, 6, //bottom
 
                     8,10,11,  8, 9,10, //left
-                   10,12,9
-                   // 12,13,14, //front
-                   // 15,16,17 //back
+                   10,12,9,
+                   12,13,14, //front
+                   15,16,17 //back
                  ],
-        colors: [
-                 1, 0, 0, 1, //left
-                 // 1, 0, 0, 1, 
-                 // 0, 1, 0, 1,
-                 // 0, 1, 0, 1,
 
-                 // 0, 1, 0, 1, //bottom
-                 // 0, 1, 0, 1, 
-                 // 0, 0, 1, 1,
-                 // 0, 0, .5, 1,
 
-                 // 1, 0, 0, 1, //right
-                 // 1, 0, 0, 1, 
-                 // 0, 0, .5, 1,
-                 // 0, 0, .5, 1,
-
-                 // 1, 0, 0, 1, //front
-                 // 0, 1, 0, 1, 
-                 // 0, 0, 1, 1,
-
-                 // 1, 0, 0, 1, //back
-                 // 0, 1, 0, 1, 
-                 // 0, 0, 1, 1
-                ]
     }),
     square = new PhiloGL.O3D.Model({
         vertices: [1, 1, 0, 
@@ -221,23 +218,23 @@ function webGLStart() {
                 program.setUniform('uMVMatrix', view);
                 program.setUniform('uPMatrix', camera.projection);
             }
-            console.log( 'Rendered: ', Math.floor( graph.$verticesLength / 3 ) * 3 );
+
             function drawScene(){
 
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-                //Draw triangle
-                graph.position.set(-10, -6, -20);
-                graph.rotation.set(0, rTri, 0);
-                setupElement( graph );
-                program.setBuffer('graph');
-                gl.drawArrays( gl.TRIANGLE_STRIP, 0, Math.floor( graph.$verticesLength / 3 ));
 
-                // program.setBuffer('indices', {
-                //     value: triangle.indices,
-                //     bufferType: gl.ELEMENT_ARRAY_BUFFER,
-                //     size: 1
-                // });
-                // gl.drawElements(gl.TRIANGLES, triangle.indices.length, gl.UNSIGNED_SHORT,0);
+                //Draw triangle
+                triangle.position.set(-3, 0, -10);
+                triangle.rotation.set(0, rTri, 0);
+                setupElement( triangle );
+                program.setBuffer('triangle');
+                gl.drawArrays( gl.TRIANGLES, 0, Math.floor( triangle.$verticesLength / 3 ));
+                program.setBuffer('indices', {
+                    value: triangle.indices,
+                    bufferType: gl.ELEMENT_ARRAY_BUFFER,
+                    size: 1
+                });
+                gl.drawElements(gl.TRIANGLES, triangle.indices.length, gl.UNSIGNED_SHORT,0);
 
                 //Draw square
                 //square.position.set(1.5, 0, -7);
@@ -254,7 +251,7 @@ function webGLStart() {
             }
 
             function animate(){
-                //rTri = rTri + 0.05;
+                rTri = rTri + 0.02;
                 rSquare = rSquare + 0.1;
             }
             (function tick(){
