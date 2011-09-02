@@ -168,7 +168,6 @@ function webGLStart() {
                     y: e.y
                 };
                 this.dragging = true;
-                console.log( this.scene.models[0].position.x, this.pos.x );
             },
             onDragCancel: function(){
 
@@ -182,7 +181,6 @@ function webGLStart() {
                     y = sign * (pos.y - e.y) / 100,
                     graph = this.scene.models[0];
 
-                console.log( this );
                 graph.position.x += (pos.x - e.x) / this.scene.camera.aspect;
                 graph.position.y += -(pos.y - e.y);
 
@@ -191,7 +189,6 @@ function webGLStart() {
             },
             onDragEnd: function(){
 
-                console.log( this.scene.models[0].position.x, this.pos.x );
                 this.dragging = false;
             },
             onMouseWheel: function(e) {
@@ -262,7 +259,7 @@ function webGLStart() {
             scene.add( graph );
 
             graph.position.set( -maxx/2, -maxy*2, graph.position.z );
-            console.log( graph.position.x );
+
             function drawScene(){
 
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
