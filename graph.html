@@ -5,13 +5,29 @@
 body{
   font-family: 'HelveticaRegular',arial,sans-serif;
 }
+#content{
+width: 800px;
+}
+p, button{
+float: left;
+margin: 0.5em 0 0 1em;
+line-height: 1.25em;
+}
+button{
+
+}
 
 </style>
 </head>
 <body onload="webGLStart()">
 <div id="content">
     <canvas id="canvas" width="800" height="400">Your browser doesn't support canvas.</canvas>
-<div id="rendered"></div>
+<div>
+    Tip: Use the mousewheel to zoom expand the graph horizontally.
+    Drag the mouse to reposition the dataset, no safeguards are provided refresh if you get lost.
+</div>
+<p id="rendered"></p>
+<button id="generate">Generate new graph</button>
 </div>
 </body>
 
