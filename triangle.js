@@ -225,7 +225,8 @@ function webGLStart() {
                 triangle.rotation.set(0.25*rTri, rTri, 0);
                 setupElement( triangle );
                 program.setBuffer('triangle');
-                gl.drawArrays( gl.TRIANGLES, 0, Math.floor( triangle.$verticesLength / 3 ));
+                gl.drawArrays( gl.TRIANGLE_STRIP, 0, 
+                               Math.floor( triangle.$verticesLength / 3 ));
                 program.setBuffer('indices', {
                     value: triangle.indices,
                     bufferType: gl.ELEMENT_ARRAY_BUFFER,
