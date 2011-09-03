@@ -1,8 +1,8 @@
 (function(){
-var $ = 
+var $ =
     function( id ){
         return document.getElementById.apply( document, arguments );
-    }, 
+    },
     ap = Array.prototype.push,
     arr = [];
 //Prevent errors
@@ -51,7 +51,7 @@ function prepareData( arr, z ){
     for( i = 0; i < arr.length; i = i + 1 ){
         if( i && i % 2 === 0 ){
             cleanArr.push( z );
-            //console.log( cleanArr[ cleanArr.length - 3], cleanArr[ cleanArr.length - 2],cleanArr[ cleanArr.length - 1 ] ); 
+            //console.log( cleanArr[ cleanArr.length - 3], cleanArr[ cleanArr.length - 2],cleanArr[ cleanArr.length - 1 ] );
         }
 
         cleanArr.push ( arr[i] );
@@ -128,7 +128,7 @@ function injectPoints( arr ){
 
     var ret = [], prev, current,
     value;
-    
+
     for( var i = 0, l = arr.length / 3; i < l; i = i + 1 ){
         current = [ arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ] ];
         if( false &&i > 0 ){
@@ -152,9 +152,14 @@ function prepareIndices( iindices, dbl ){
     //Connect Z facing graphs
     for( ; i < iindices; i = i + 2 ){
 
-        //ret.push( i, i + 1, i + 3 );
-        //ret.push( i, i + 2, i + 3 );
+        ret.push( i, i + 1, i + 3 );
+        ret.push( i, i + 2, i + 3 );
     }
+
+    return ret;
+    
+    //FIXME: calculate indices to back (same direction as front)
+    //Build Back, Top, Bottom, Right, Left
 
     //If a block, must connect side, top, bottom sides of graph
     if( dbl ){
@@ -170,8 +175,6 @@ function prepareIndices( iindices, dbl ){
             }
             ret.push( i, i + 2, temp );
             ret.push( i, temp, temp + 2 );
-            console.log( i, i + 2, temp );
-            console.log( i, temp, temp + 2 );
         }
         //ret.push( half - 1, half + 1, half - 2 );
         //ret.push( half, half + 1, half - 2 );
@@ -185,14 +188,48 @@ function prepareIndices( iindices, dbl ){
 function generateModel(){
     var matrix = prepareData( generatePoints(0,4) ),
         iindices,// = Math.floor( matrix.length / 3 ),
-        indices;// = prepareIndices( iindices );
+        indices,// = prepareIndices( iindices );
+        length3 = matrix.length,
+        length = length3 / 3,
+        l, half,i,tmp,
+        top = [], bottom=[];
 
-    //Make a copy of the data at z-1
-    for( var l = matrix.length - 1; ~l ;l = l - 6 ){
-        matrix.push( matrix[l-2-3], matrix[l-1-3], matrix[l-3] - 100 );
-        matrix.push( matrix[l-2], matrix[l-1], matrix[l] - 100 );
+    //Build back face
+    for( i = 0, l = length3; i < l;i = i + 3 ){
+
+        matrix.push( matrix[i], matrix[i+1], matrix[i + 2] - 100 );
+        //Build top or bottom
+        if( i%2 ){
+            top.push( matrix[i] , matrix[i+1], matrix[i+2] );
+            top.push( matrix[i] , matrix[i+1], matrix[i+2] - 100 );
+        } else {
+            bottom.push( matrix[i] , matrix[i+1], matrix[i+2] );
+            bottom.push( matrix[i] , matrix[i+1], matrix[i+2] - 100 );
+        }
     }
-    console.log( matrix );
+    ap.apply( matrix, top );
+    ap.apply( matrix, bottom );
+
+    //FIXME: I guess loop left/right, inefficient with one push
+    //Build right face
+    tmp = ( ( length ) - 2  ) * 3;
+    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
+    tmp = tmp + 3;
+    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
+    tmp = tmp - 3 + length3;
+    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
+    tmp = tmp + 3;
+    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
+
+    //Build left face
+    tmp = 0 * 3;
+    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
+    tmp = tmp + 3;
+    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
+    tmp = tmp - 3 + length3;
+    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
+    tmp = tmp + 3;
+    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
 
     iindices = Math.floor( matrix.length / 3 );
     indices = prepareIndices( iindices, true );
@@ -205,7 +242,7 @@ function generateModel(){
     // }
 
     var colors = [];
-    for( var i = 0; i < matrix.length; i = i + 3 ){
+    for( i = 0; i < matrix.length; i = i + 3 ){
         if( i < matrix.length / 2 ){
             colors.push( 1, 0, 0, 1 );
         } else {
@@ -292,7 +329,7 @@ window.webGLStart = function() {
                 program.setUniform('uPMatrix', camera.projection);
             }
 
-            $( 'rendered' ).innerHTML = 'Vertice Count: ' + 
+            $( 'rendered' ).innerHTML = 'Vertice Count: ' +
                 Math.floor( graph.$verticesLength / 3 ) * 3;
 
             scene.add( graph );
@@ -312,9 +349,9 @@ window.webGLStart = function() {
                     size: 1
                 });
 
-                gl.drawElements( 
-                    gl.TRIANGLES, 
-                    graph.indices.length, 
+                gl.drawElements(
+                    gl.TRIANGLES,
+                    graph.indices.length,
                     gl.UNSIGNED_SHORT, 0 );
                 graph.update();
                 camera.update();
@@ -350,7 +387,7 @@ window.webGLStart = function() {
                     y = sign * (pos.y - e.y) / 100,
                     graph = this.scene.models[0];
 
-                //Due to aspect ratio manipulations X must be calculated based 
+                //Due to aspect ratio manipulations X must be calculated based
                 // this aspect ratio;
                 // The needed ratio comes out to:
                 // -2.3136792453 @ 1
@@ -366,7 +403,7 @@ window.webGLStart = function() {
                 }
                 pos.x = e.x;
                 pos.y = e.y;
-                                        
+
             },
             onDragEnd: function(e){
                 console.log( 'Mouse', e.x, 'Graph', this.scene.models[0].position.x, 'Camera', this.camera.aspect );
