@@ -12,13 +12,15 @@ if( !window.console ){
 }
 
 function generatePoints( seed, length, max ){
-    var arr = [];
+    var arr = [], val;
     max = max || 100;
     seed = seed || 0;
     length = length*10 || 400;
 
     for( var i = seed; i < length; i=i+10 ){
-        arr.push( i, Math.floor( Math.random() * max ) );
+        val = Math.floor( Math.random() * max );
+        arr.push( i, val );
+
     }
 
     return arr;
@@ -131,124 +133,115 @@ function injectPoints( arr ){
 
     for( var i = 0, l = arr.length / 3; i < l; i = i + 1 ){
         current = [ arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ] ];
-        if( false &&i > 0 ){
+        if( i > 0 ){
             value = faux( prev, current, i === 1, i === l  );
             ap.apply( ret, value );
         }
+        // Do I need to add extra points for TRIANGLE_STRIP?
+        // if( i !== 0 && i !== arr.length / 3 - 1 ){
+        //     ret.push( arr[ i*3 ], 0, arr[ i*3 + 2 ],
+        //               arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ]);
+        // }
         ret.push( arr[ i*3 ], 0, arr[ i*3 + 2 ],
-                  arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ]);
+                 arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ]);
         prev = current;
     }
 
     return ret;
 }
 
-//Create indices between necessary points
-//If double create links to the mirror image at z=z+1
-function prepareIndices( iindices, dbl ){
-    var ret = [], i = 0, half = Math.floor( iindices/2 ), temp;
+//Pass in the number of vertices, subtract 8 and connect the 4 faces
+//Then calculate add indices of remaining 8 vertices
+function prepareIndices( iindices ){
+    var ret = [], 
+        length = iindices,
+        quarter = length / 4,
+        i, j, l, temp, max;
+    //remove right/left
+    //length = length - 8;
+    l = length;
 
+    //Now do the 4 faces, but do not combine each of them
+    for( j = 0; j < 4; j = j + 1 ){
 
-    //Connect Z facing graphs
-    for( ; i < iindices; i = i + 2 ){
+        for( i = j * quarter; i + 3< quarter + j * quarter; i = i + 2 ){
 
-        ret.push( i, i + 1, i + 3 );
-        ret.push( i, i + 2, i + 3 );
-    }
-
-    return ret;
-    
-    //FIXME: calculate indices to back (same direction as front)
-    //Build Back, Top, Bottom, Right, Left
-
-    //If a block, must connect side, top, bottom sides of graph
-    if( dbl ){
-        //Connect start and finish of points
-        ret.push( 0, 1, iindices - 2 );
-        ret.push( 1, iindices - 2, iindices - 1 );
-
-        for( i = 0; i < half ; i = i + 1 ){
-
-            temp = iindices - i - 4; //Less math
-            if( i % 2 ){
-                temp = temp + 2;
-            }
-            ret.push( i, i + 2, temp );
-            ret.push( i, temp, temp + 2 );
+            ret.push( i, i + 1, i + 2 );
+            ret.push( i + 1, i + 2, i + 3 );
         }
-        //ret.push( half - 1, half + 1, half - 2 );
-        //ret.push( half, half + 1, half - 2 );
-
     }
+
+    ret.push( 0, 1, quarter );
+    ret.push( 1, quarter, quarter + 1 );
+
+    ret.push( quarter - 2, quarter - 1, quarter * 2 - 1 );
+    ret.push( quarter - 2, quarter * 2 - 1, quarter * 2 - 2 );
 
     return ret;
 }
 
 //Generate a new model based on data
 function generateModel(){
-    var matrix = prepareData( generatePoints(0,4) ),
+    var matrix = prepareData( generatePoints() ),
         iindices,// = Math.floor( matrix.length / 3 ),
         indices,// = prepareIndices( iindices );
-        length3 = matrix.length,
+        length3 = matrix.length, //Length of original matrix before 3dified
         length = length3 / 3,
         l, half,i,tmp,
         top = [], bottom=[];
 
     //Build back face
-    for( i = 0, l = length3; i < l;i = i + 3 ){
+    for( i = 0, l = length3; i < l; i = i + 3 ){
 
-        matrix.push( matrix[i], matrix[i+1], matrix[i + 2] - 100 );
+        matrix.push( matrix[i], matrix[i+1], matrix[i + 2] - 10 );
+        //These are only necessary if the bottom should be a different color
+        // webgl lessons #4, read comments
         //Build top or bottom
         if( i%2 ){
             top.push( matrix[i] , matrix[i+1], matrix[i+2] );
-            top.push( matrix[i] , matrix[i+1], matrix[i+2] - 100 );
+            top.push( matrix[i] , matrix[i+1], matrix[i+2] - 10 );
         } else {
             bottom.push( matrix[i] , matrix[i+1], matrix[i+2] );
-            bottom.push( matrix[i] , matrix[i+1], matrix[i+2] - 100 );
+            bottom.push( matrix[i] , matrix[i+1], matrix[i+2] - 10 );
         }
     }
     ap.apply( matrix, top );
     ap.apply( matrix, bottom );
 
-    //FIXME: I guess loop left/right, inefficient with one push
-    //Build right face
-    tmp = ( ( length ) - 2  ) * 3;
-    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
-    tmp = tmp + 3;
-    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
-    tmp = tmp - 3 + length3;
-    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
-    tmp = tmp + 3;
-    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
-
-    //Build left face
-    tmp = 0 * 3;
-    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
-    tmp = tmp + 3;
-    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
-    tmp = tmp - 3 + length3;
-    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
-    tmp = tmp + 3;
-    matrix.push( matrix[ tmp ], matrix[ tmp + 1 ], matrix[ tmp + 2 ] );
-
     iindices = Math.floor( matrix.length / 3 );
-    indices = prepareIndices( iindices, true );
-    //Debug matrices and indices
-    // for( var i = 0; i < matrix.length; i = i + 3 ){
-    //     console.log( i/3 + ':', matrix[i], matrix[i+1], matrix[i+2] );
-    // }
+    indices = prepareIndices( iindices );
+
+    //Debug FINAL matrices and indices
     // for( var i = 0; i < indices.length; i = i + 3 ){
     //     console.log( indices[i], indices[i+1], indices[i+2] );
     // }
 
-    var colors = [];
-    for( i = 0; i < matrix.length; i = i + 3 ){
-        if( i < matrix.length / 2 ){
-            colors.push( 1, 0, 0, 1 );
-        } else {
-            colors.push( 0, 1, 0, 1 );
+    // for( var i = 0; i < matrix.length; i = i + 3 ){
+    //     console.log( i/3 + ':', matrix[i], matrix[i+1], matrix[i+2] );
+    // }
+
+
+    //Generate some colors
+    var colors = [],
+        colorsTmpl = [ [ 12/255, 37/255, 56/255, 1 ],
+                       [ 43/255, 67/255, 79/255, 1 ],
+                       [ 99/255,130/255,112/255, 1 ],
+                       [188/255,201/255,142/255, 1 ]
+                     ];
+
+    for( var j = 0; j < 4; j = j + 1 ){
+        for( i = 0;
+             i < matrix.length / 4; 
+             i = i + 3 ){
+                 ap.apply( colors, colorsTmpl[ j ] );
         }
     }
+
+    // colors.push( 1, 1, 1, 1,
+    //              1, 1, 1, 1,
+    //              1, 1, 1, 1,
+    //              1, 1, 1, 1 );
+
     return new PhiloGL.O3D.Model({
         vertices: matrix,
         colors: colors,
@@ -340,8 +333,8 @@ window.webGLStart = function() {
 
                 setupElement( graph );
                 program.setBuffer('graph');
-                gl.drawArrays( gl.TRIANGLE_STRIP, 0,
-                               Math.floor( graph.$verticesLength / 3 ) );
+                // gl.drawArrays( gl.TRIANGLE_STRIP, 0,
+                //                Math.floor( graph.$verticesLength / 3 ) );
 
                 program.setBuffer('indices', {
                     value: graph.indices,
@@ -371,7 +364,9 @@ window.webGLStart = function() {
                     x: e.x,
                     y: e.y
                 };
-                console.log( 'Mouse', e.x, 'Graph', this.scene.models[0].position.x, 'Camera', this.camera.aspect );
+                console.log( 'Mouse', e.x, 
+                             'Graph', this.scene.models[0].position.x, 
+                             'Camera', this.camera.aspect );
                 this.dragging = true;
             },
             onDragCancel: function(){
@@ -406,7 +401,9 @@ window.webGLStart = function() {
 
             },
             onDragEnd: function(e){
-                console.log( 'Mouse', e.x, 'Graph', this.scene.models[0].position.x, 'Camera', this.camera.aspect );
+                console.log( 'Mouse', e.x, 
+                             'Graph', this.scene.models[0].position.x, 
+                             'Camera', this.camera.aspect );
                 this.dragging = false;
 
             },
@@ -414,14 +411,20 @@ window.webGLStart = function() {
                 e.stop();
                 var camera = this.camera;
 
-                //camera.position.z += e.wheel * 100;
-                camera.aspect -= e.wheel * .1;
-                if( camera.aspect <= 0.01 ){
-                    camera.aspect = 0.01; }
-                if( camera.aspect > 2.5 ){
-                    camera.aspect = 2.5;
+                if( !e.event.shiftKey ){
+
+                    camera.aspect -= e.wheel * .1;
+                    if( camera.aspect <= 0.01 ){
+                        camera.aspect = 0.01; }
+                    if( camera.aspect > 2.5 ){
+                        camera.aspect = 2.5;
+                    }
+                    console.log( 'Aspect Ratio:', camera.aspect );
+                } else {
+                    camera.position.z += e.wheel * 100;
+                    console.log( 'New Z:', camera.position.z );
                 }
-                console.log( 'Aspect Ratio:', camera.aspect );
+
             }
         }
 
