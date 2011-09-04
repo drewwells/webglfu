@@ -26,13 +26,10 @@ function generatePoints( seed, length, max ){
     return arr;
 }
 
-//Globally accessible values
-var maxx,// = Math.max.apply(Math,arr.filter(function(n,i){ return !(i%2); })),
-    maxy;// = Math.max.apply(Math,arr.filter(function(n,i){ return i%2; }));
-
+//Take any set of values and make them fit in our window nicely
 function normalizeArray( arr ){
-    maxx = Math.max.apply(Math,arr.filter(function(n,i){ return !(i%2); }));
-    maxy = Math.max.apply(Math,arr.filter(function(n,i){ return i%2; }));
+    var maxx = Math.max.apply(Math,arr.filter(function(n,i){ return !(i%2); })),
+        maxy = Math.max.apply(Math,arr.filter(function(n,i){ return i%2; }));
 
     for( var i = 0,l = arr.length; i < l; i = i + 2 ){
 
@@ -82,6 +79,10 @@ function bezier3( a, b, c, d, t, dest ){
     return dest;
 }
 
+//Dynamically create control points and
+// send them to Bezier functions
+// Return: array of points for
+// build a curve
 function faux( a, b, enda, endb ){
     //Make control points, okay?
     var ret = [],
@@ -124,24 +125,19 @@ function faux( a, b, enda, endb ){
     return ret;
 }
 
-//Inject points so every point is ( start, pt, end )
 //Prefix every point with a point on the y=0 axis
-function injectPoints( arr ){
+//Also applying bezier curve to generated points
+function injectPoints( arr, raw ){
 
     var ret = [], prev, current,
     value;
 
     for( var i = 0, l = arr.length / 3; i < l; i = i + 1 ){
         current = [ arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ] ];
-        if( i > 0 ){
+        if( !raw && i > 0 ){
             value = faux( prev, current, i === 1, i === l  );
             ap.apply( ret, value );
         }
-        // Do I need to add extra points for TRIANGLE_STRIP?
-        // if( i !== 0 && i !== arr.length / 3 - 1 ){
-        //     ret.push( arr[ i*3 ], 0, arr[ i*3 + 2 ],
-        //               arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ]);
-        // }
         ret.push( arr[ i*3 ], 0, arr[ i*3 + 2 ],
                  arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ]);
         prev = current;
@@ -153,13 +149,18 @@ function injectPoints( arr ){
 //Pass in the number of vertices, subtract 8 and connect the 4 faces
 //Then calculate add indices of remaining 8 vertices
 function prepareIndices( iindices ){
-    var ret = [], 
+    var ret = [],
         length = iindices,
         quarter = length / 4,
         i, j, l, temp, max;
     //remove right/left
     //length = length - 8;
     l = length;
+    ret.push( 0, 1, quarter );
+    ret.push( 1, quarter, quarter + 1 );
+
+    ret.push( quarter - 2, quarter - 1, quarter * 2 - 1 );
+    ret.push( quarter - 2, quarter * 2 - 1, quarter * 2 - 2 );
 
     //Now do the 4 faces, but do not combine each of them
     for( j = 0; j < 4; j = j + 1 ){
@@ -171,13 +172,56 @@ function prepareIndices( iindices ){
         }
     }
 
-    ret.push( 0, 1, quarter );
-    ret.push( 1, quarter, quarter + 1 );
-
-    ret.push( quarter - 2, quarter - 1, quarter * 2 - 1 );
-    ret.push( quarter - 2, quarter * 2 - 1, quarter * 2 - 2 );
-
     return ret;
+}
+
+//Create vertices for the model
+function generateVertices( matrix, z ){
+    var length3 = matrix.length,
+        displace = z || 10,
+        top = [], bottom = [],
+        i,l;
+
+    //Build back face
+    for( i = 0, l = length3; i < l; i = i + 3 ){
+
+        matrix.push( matrix[i], matrix[i+1], matrix[i + 2] + displace );
+        //These are only necessary if the bottom should be a different color
+        // webgl lessons #4, read comments
+        // If this is removed, must alter how generateColors works
+        //Build top or bottom
+        if( i%2 ){
+            top.push( matrix[i] , matrix[i+1], matrix[i+2] );
+            top.push( matrix[i] , matrix[i+1], matrix[i+2] + displace );
+        } else {
+            bottom.push( matrix[i] , matrix[i+1], matrix[i+2] );
+            bottom.push( matrix[i] , matrix[i+1], matrix[i+2] + displace );
+        }
+    }
+    ap.apply( matrix, top );
+    ap.apply( matrix, bottom );
+
+    return matrix;
+}
+
+//Add colors to the vertices, options? 1: vertices
+function generateColors( length ){
+    var colors = [],
+        colorsTmpl = [ [ 12/255, 37/255, 56/255, 1 ],
+                       [ 43/255, 67/255, 79/255, 1 ],
+                       [ 99/255,130/255,112/255, 1 ],
+                       [188/255,201/255,142/255, 1 ]
+                     ],
+        i,j;
+
+    for( j = 0; j < 4; j = j + 1 ){
+        for( i = 0;
+             i < length / 4;
+             i = i + 3 ){
+                 ap.apply( colors, colorsTmpl[ j ] );
+        }
+    }
+    return colors;
 }
 
 //Generate a new model based on data
@@ -185,66 +229,24 @@ function generateModel(){
     var matrix = prepareData( generatePoints() ),
         iindices,// = Math.floor( matrix.length / 3 ),
         indices,// = prepareIndices( iindices );
-        length3 = matrix.length, //Length of original matrix before 3dified
-        length = length3 / 3,
-        l, half,i,tmp,
-        top = [], bottom=[];
+        half,i,tmp,
+        vertices = generateVertices( matrix );
 
-    //Build back face
-    for( i = 0, l = length3; i < l; i = i + 3 ){
-
-        matrix.push( matrix[i], matrix[i+1], matrix[i + 2] - 10 );
-        //These are only necessary if the bottom should be a different color
-        // webgl lessons #4, read comments
-        //Build top or bottom
-        if( i%2 ){
-            top.push( matrix[i] , matrix[i+1], matrix[i+2] );
-            top.push( matrix[i] , matrix[i+1], matrix[i+2] - 10 );
-        } else {
-            bottom.push( matrix[i] , matrix[i+1], matrix[i+2] );
-            bottom.push( matrix[i] , matrix[i+1], matrix[i+2] - 10 );
-        }
-    }
-    ap.apply( matrix, top );
-    ap.apply( matrix, bottom );
-
-    iindices = Math.floor( matrix.length / 3 );
+    iindices = vertices.length / 3;
     indices = prepareIndices( iindices );
 
     //Debug FINAL matrices and indices
-    // for( var i = 0; i < indices.length; i = i + 3 ){
+    // for( i = 0; i < indices.length; i = i + 3 ){
     //     console.log( indices[i], indices[i+1], indices[i+2] );
     // }
 
-    // for( var i = 0; i < matrix.length; i = i + 3 ){
+    // for( i = 0; i < matrix.length; i = i + 3 ){
     //     console.log( i/3 + ':', matrix[i], matrix[i+1], matrix[i+2] );
     // }
 
-
-    //Generate some colors
-    var colors = [],
-        colorsTmpl = [ [ 12/255, 37/255, 56/255, 1 ],
-                       [ 43/255, 67/255, 79/255, 1 ],
-                       [ 99/255,130/255,112/255, 1 ],
-                       [188/255,201/255,142/255, 1 ]
-                     ];
-
-    for( var j = 0; j < 4; j = j + 1 ){
-        for( i = 0;
-             i < matrix.length / 4; 
-             i = i + 3 ){
-                 ap.apply( colors, colorsTmpl[ j ] );
-        }
-    }
-
-    // colors.push( 1, 1, 1, 1,
-    //              1, 1, 1, 1,
-    //              1, 1, 1, 1,
-    //              1, 1, 1, 1 );
-
     return new PhiloGL.O3D.Model({
         vertices: matrix,
-        colors: colors,
+        colors: generateColors( vertices.length ),
         indices: indices
     });
 }
@@ -284,23 +286,31 @@ window.webGLStart = function() {
                 scene = app.scene,
                 view = new PhiloGL.Mat4(),
                 rTri = 0, rSquare = 0,
-                camera = new PhiloGL.Camera( 45, 1, 10, 0, {
-                position: {
-                    x: 0, y: 0, z: -(400 )*1.3
-                }
-            });
+                //Custom camera caused insane issues
+                // camera = new PhiloGL.Camera( 45, 1, 10, 0, {
+                //     position: {
+                //         x: 0, y: 0, z: -(400 )*1.3
+                //     }
+                // }),
+                camera = app.camera;
 
-            app.camera = camera;
+            //Allow much further camera
+            camera.far = 1000;
+            //Calculate Z position based on normalization
+            camera.position.z = -400 * 1.3;
+            //Aspect based on normalize
+            camera.aspect = 0.85;
 
             gl.viewport(0, 0, canvas.width, canvas.height);
+            //Scene background color
             gl.clearColor( 211/255, 200/255, 184/255, 1);
             gl.clearDepth( 1 );
             gl.enable (gl.DEPTH_TEST );
             gl.depthFunc( gl.LEQUAL );
 
-            //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             camera.view.id();
             updatePosition( graph );
+
             function setupElement( elem ){
 
                 //update element matrix
@@ -318,6 +328,7 @@ window.webGLStart = function() {
                         size: 4
                     }
                 });
+                //set uniforms
                 program.setUniform('uMVMatrix', view);
                 program.setUniform('uPMatrix', camera.projection);
             }
@@ -332,9 +343,6 @@ window.webGLStart = function() {
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
 
                 setupElement( graph );
-                program.setBuffer('graph');
-                // gl.drawArrays( gl.TRIANGLE_STRIP, 0,
-                //                Math.floor( graph.$verticesLength / 3 ) );
 
                 program.setBuffer('indices', {
                     value: graph.indices,
@@ -346,7 +354,7 @@ window.webGLStart = function() {
                     gl.TRIANGLES,
                     graph.indices.length,
                     gl.UNSIGNED_SHORT, 0 );
-                graph.update();
+
                 camera.update();
 
             }
@@ -354,7 +362,7 @@ window.webGLStart = function() {
             (function tick(){
 
                 drawScene();
-                setTimeout(tick,1000/24);
+                setTimeout(tick,1000/60);
             })();
         },
         events: {
@@ -364,8 +372,8 @@ window.webGLStart = function() {
                     x: e.x,
                     y: e.y
                 };
-                console.log( 'Mouse', e.x, 
-                             'Graph', this.scene.models[0].position.x, 
+                console.log( 'Mouse', e.x,
+                             'Graph', this.scene.models[0].position.x,
                              'Camera', this.camera.aspect );
                 this.dragging = true;
             },
@@ -401,8 +409,8 @@ window.webGLStart = function() {
 
             },
             onDragEnd: function(e){
-                console.log( 'Mouse', e.x, 
-                             'Graph', this.scene.models[0].position.x, 
+                console.log( 'Mouse', e.x,
+                             'Graph', this.scene.models[0].position.x,
                              'Camera', this.camera.aspect );
                 this.dragging = false;
 
@@ -422,7 +430,9 @@ window.webGLStart = function() {
                     console.log( 'Aspect Ratio:', camera.aspect );
                 } else {
                     camera.position.z += e.wheel * 100;
-                    console.log( 'New Z:', camera.position.z );
+                    console.log( 'Camera X:', camera.position.x, 
+                                 'Y:', camera.position.y,
+                                 'Z:', camera.position.z );
                 }
 
             }
