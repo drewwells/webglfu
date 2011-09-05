@@ -279,7 +279,6 @@ var webGLStart = function( canvas, models ) {
             camera.far = 1000;
             //Aspect based on normalize
             camera.aspect = 0.85;
-
             gl.viewport(0, 0, canvas.width, canvas.height);
             //Scene background color
             gl.clearColor( 211/255, 200/255, 184/255, 1);
@@ -289,6 +288,17 @@ var webGLStart = function( canvas, models ) {
 
             camera.view.id();
             updatePosition( graph );
+
+            $( 'rendered' ).innerHTML = 'Vertice Count: ' +
+                Math.floor( graph.$verticesLength / 3 ) * 3;
+
+            scene.add( graph );
+
+            (function tick(){
+
+                drawScene();
+                setTimeout(tick,1000/60);
+            })();
 
             function setupElement( elem ){
 
@@ -312,10 +322,6 @@ var webGLStart = function( canvas, models ) {
                 program.setUniform('uPMatrix', camera.projection);
             }
 
-            $( 'rendered' ).innerHTML = 'Vertice Count: ' +
-                Math.floor( graph.$verticesLength / 3 ) * 3;
-
-            scene.add( graph );
 
             function drawScene(){
 
@@ -338,11 +344,6 @@ var webGLStart = function( canvas, models ) {
 
             }
 
-            (function tick(){
-
-                drawScene();
-                setTimeout(tick,1000/60);
-            })();
         },
         events: {
             onDragStart: function(e) {
