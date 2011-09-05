@@ -1,16 +1,12 @@
 (function(){
-var $ =
-    function( id ){
-        return document.getElementById.apply( document, arguments );
-    },
-    ap = Array.prototype.push,
-    arr = [];
-//Prevent errors
+
+//Prevent errors if log doesn't existent
 if( !window.console ){
     window.console = {};
     window.console.log = function(){};
 }
 
+//Build a random 2d graph
 function generatePoints( seed, length, max ){
     var arr = [], val;
     max = max || 100;
@@ -18,9 +14,9 @@ function generatePoints( seed, length, max ){
     length = length*10 || 400;
 
     for( var i = seed; i < length; i=i+10 ){
+
         val = Math.floor( Math.random() * max );
         arr.push( i, val );
-
     }
 
     return arr;
@@ -57,72 +53,7 @@ function prepareData( arr, z ){
     }
     cleanArr.push( z );
 
-    return injectPoints( cleanArr );
-}
-
-function bezier( a, b, c, d, t ){
-    var a3 = a * 3, b3 = b * 3, c3 = c * 3;
-    var ret = a + t*(b3 - a3 + t*(a3-2*b3+c3 + t*(b3-a-c3+d)));
-    return ret;
-}
-function bezier3( a, b, c, d, t, dest ){
-    if( dest == null ) dest = [];
-    var x = bezier(a[0], b[0], c[0], d[0], t);
-    //Inject a y=0 axis point prior to calculated point
-    dest.push( x );
-    dest.push( 0 );
-    dest.push( 0 ); //sigh hard coded z axis
-    dest.push( x );
-    dest.push( bezier(a[1], b[1], c[1], d[1], t) );
-    //dest.push( bezier(a[2], b[2], c[2], d[2], t) ); skipping z for now
-    dest.push( 0 );
-    return dest;
-}
-
-//Dynamically create control points and
-// send them to Bezier functions
-// Return: array of points for
-// build a curve
-function faux( a, b, enda, endb ){
-    //Make control points, okay?
-    var ret = [],
-        cp1 = [ ],
-        cp2 = [ ],
-        dx = 0.4 * ( b[0] - a[0] ),
-        dy = 0.4 * ( b[1] - a[1] );
-
-    //endpoints controlpoint dy
-    if( enda ){
-        cp1.push( a[0] );
-        cp1.push( b[1] > a[1] ? b[1] + dy : b[1] - dy );
-        cp1.push( a[2] );//only true in flat
-    } else {
-        cp1.push( a[0] + dx );
-        cp1.push( a[1] );
-        cp1.push( a[2] );//only true in flat
-    }
-
-    if( endb ){
-        cp2.push( b[0] );
-        cp2.push( b[1] > a[1] ? b[1] - dy : b[1] + dy );
-        cp2.push( b[2] );//only true in flat
-    } else {
-        cp2.push( b[0] - dx );
-        cp2.push( b[1] );
-        cp2.push( b[2] );//only true in flat
-    }
-
-    for( var i = 1, count = 50; i < count; i++ ){
-        var t = i / ( count - 1 );
-        ap.apply( ret, bezier3(
-            a,
-            cp1,
-            cp2,
-            b,
-            t ) );
-    }
-
-    return ret;
+    return injectPoints( cleanArr, true );
 }
 
 //Prefix every point with a point on the y=0 axis
@@ -136,7 +67,7 @@ function injectPoints( arr, raw ){
         current = [ arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ] ];
         if( !raw && i > 0 ){
             value = faux( prev, current, i === 1, i === l  );
-            ap.apply( ret, value );
+            ap.push.apply( ret, value );
         }
         ret.push( arr[ i*3 ], 0, arr[ i*3 + 2 ],
                  arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ]);
@@ -175,8 +106,8 @@ function prepareIndices( iindices ){
     return ret;
 }
 
-//Create vertices for the model
-function generateVertices( matrix, z ){
+//Create back, top, bottom walls
+function make3d( matrix, z ){
     var length3 = matrix.length,
         displace = z || 10,
         top = [], bottom = [],
@@ -198,8 +129,8 @@ function generateVertices( matrix, z ){
             bottom.push( matrix[i] , matrix[i+1], matrix[i+2] + displace );
         }
     }
-    ap.apply( matrix, top );
-    ap.apply( matrix, bottom );
+    ap.push.apply( matrix, top );
+    ap.push.apply( matrix, bottom );
 
     return matrix;
 }
@@ -218,22 +149,22 @@ function generateColors( length ){
         for( i = 0;
              i < length / 4;
              i = i + 3 ){
-                 ap.apply( colors, colorsTmpl[ j ] );
+                 ap.push.apply( colors, colorsTmpl[ j ] );
         }
     }
+
     return colors;
 }
 
 //Generate a new model based on data
-function generateModel(){
-    var matrix = prepareData( generatePoints() ),
-        iindices,// = Math.floor( matrix.length / 3 ),
+function generateModel( points ){
+    var matrix,//
         indices,// = prepareIndices( iindices );
-        half,i,tmp,
-        vertices = generateVertices( matrix );
+        i;
 
-    iindices = vertices.length / 3;
-    indices = prepareIndices( iindices );
+    matrix = prepareData( points || generatePoints() );
+    make3d( matrix );
+    indices = prepareIndices( matrix.length / 3 );
 
     //Debug FINAL matrices and indices
     // for( i = 0; i < indices.length; i = i + 3 ){
@@ -246,7 +177,7 @@ function generateModel(){
 
     return new PhiloGL.O3D.Model({
         vertices: matrix,
-        colors: generateColors( vertices.length ),
+        colors: generateColors( matrix.length ),
         indices: indices
     });
 }
@@ -258,22 +189,78 @@ function updatePosition( graph ){
     graph.position.set( -180, -215, graph.position.z );
 }
 
+var $ =
+    function( id ){
+        return document.getElementById.apply( document, arguments );
+    },
+    ap = Array.prototype,
+    op = Object.prototype,
+    typeCache = {},
+    type = function( obj ){
+        var _class = op.toString.call( obj );
+        if( !typeCache[ _class ] ){
+            typeCache[ _class ] = _class
+                .replace( /\[object\s([^\]]+)]/, function( all, m ){
+                    return m.toLowerCase();
+                });
+        }
+        return typeCache[ _class ] || 'object';
+    };
 
-window.webGLStart = function() {
+/**
+# graph3d 
+
+## Options:
+
+ - canvas: id or DOM element to reference
+
+ - datasets: array of datasets 
+
+ - colors: array of colors, see 
+ 
+ */
+window.graph3d = function( options ){
+
+    var canvas = options.canvas;
+    if( !canvas ){
+
+        console.log( 'Need a reference to a canvas' );
+    }
+    if( PhiloGL.hasWebGL() === false ){
+
+        if( type( canvas ) === "string" ){
+            canvas = $( canvas );
+        }
+        canvas.innerHTML = "You do not support WebGL";
+    } else {
+        if( canvas ){
+            return webGLStart( canvas, generateModel( options.points ) );
+        }
+    }
+
+    return null;    
+};
+
+var webGLStart = function( canvas, models ) {
     var theta = 0,
         icamera = 1,
-        graph = generateModel(), pos;
+        graph = models, pos;
 
     $( 'generate' ).addEventListener('click',function(){
         graph = generateModel();
         updatePosition( graph );
     });
 
-    PhiloGL('canvas', {
+    PhiloGL(canvas, {
         program: {
             from: 'ids',
             vs: 'shader-vs',
             fs: 'shader-fs'
+        },
+        camera: {
+            position: {
+                x: 0, y: 0, z: -400 * 1.3
+            }
         },
         onError: function() {
 
@@ -286,18 +273,10 @@ window.webGLStart = function() {
                 scene = app.scene,
                 view = new PhiloGL.Mat4(),
                 rTri = 0, rSquare = 0,
-                //Custom camera caused insane issues
-                // camera = new PhiloGL.Camera( 45, 1, 10, 0, {
-                //     position: {
-                //         x: 0, y: 0, z: -(400 )*1.3
-                //     }
-                // }),
                 camera = app.camera;
 
             //Allow much further camera
             camera.far = 1000;
-            //Calculate Z position based on normalization
-            camera.position.z = -400 * 1.3;
             //Aspect based on normalize
             camera.aspect = 0.85;
 
@@ -440,5 +419,73 @@ window.webGLStart = function() {
 
     });
 };
+
+
+//Methods related to build Bezier curve
+function bezier( a, b, c, d, t ){
+    var a3 = a * 3, b3 = b * 3, c3 = c * 3;
+    var ret = a + t*(b3 - a3 + t*(a3-2*b3+c3 + t*(b3-a-c3+d)));
+    return ret;
+}
+function bezier3( a, b, c, d, t, dest ){
+    if( dest == null ) dest = [];
+    var x = bezier(a[0], b[0], c[0], d[0], t);
+    //Inject a y=0 axis point prior to calculated point
+    dest.push( x );
+    dest.push( 0 );
+    dest.push( 0 ); //sigh hard coded z axis
+    dest.push( x );
+    dest.push( bezier(a[1], b[1], c[1], d[1], t) );
+    //dest.push( bezier(a[2], b[2], c[2], d[2], t) ); skipping z for now
+    dest.push( 0 );
+    return dest;
+}
+
+//Dynamically create control points and
+// send them to Bezier functions
+// Return: array of points for
+// build a curve
+function faux( a, b, enda, endb ){
+    //Make control points, okay?
+    var ret = [],
+        cp1 = [ ],
+        cp2 = [ ],
+        dx = 0.4 * ( b[0] - a[0] ),
+        dy = 0.4 * ( b[1] - a[1] );
+
+    //endpoints controlpoint dy
+    if( enda ){
+        cp1.push( a[0] );
+        cp1.push( b[1] > a[1] ? b[1] + dy : b[1] - dy );
+        cp1.push( a[2] );//only true in flat
+    } else {
+        cp1.push( a[0] + dx );
+        cp1.push( a[1] );
+        cp1.push( a[2] );//only true in flat
+    }
+
+    if( endb ){
+        cp2.push( b[0] );
+        cp2.push( b[1] > a[1] ? b[1] - dy : b[1] + dy );
+        cp2.push( b[2] );//only true in flat
+    } else {
+        cp2.push( b[0] - dx );
+        cp2.push( b[1] );
+        cp2.push( b[2] );//only true in flat
+    }
+
+    for( var i = 1, count = 50; i < count; i++ ){
+        var t = i / ( count - 1 );
+        ap.push.apply( ret, bezier3(
+            a,
+            cp1,
+            cp2,
+            b,
+            t ) );
+    }
+
+    return ret;
+}
+
 
 })();
