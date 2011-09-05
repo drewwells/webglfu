@@ -22,15 +22,21 @@ button{
 <body onload="webGLStart()">
 <div id="content">
     <canvas id="canvas" width="800" height="400">Your browser doesn't support canvas.</canvas>
+
+<p id="rendered" style="margin-left: 40em;"></p>
+<button style="display:none;" id="generate">Generate new graph</button>
+
+<div style="clear:both;">
+    <h3>Controls:</h3>
+    <ul>
+        <li>Ctrl + Left mouse: rotate graph</li>
+        <li>Shift + Mouse wheel: to zoom in/out</li>
+        <li>Mouse wheel: expand/contract graph</li>
+    </ul>
+</div>
 <p>
-    Tip: Use the mousewheel to zoom expand the graph horizontally.
-    Drag the mouse to reposition the dataset, no safeguards are provided refresh if you get lost.
-</p>
-<p id="rendered"></p>
-<button id="generate">Generate new graph</button>
-<p>(breaks mouse sometimes, use refresh)</p>
-<p>
-    A bezier curve of 50 points is used to smooth vertices.  The recommended value is 500 depending on various factors, but 50 provides a decent curve.
+    Tip: Use the mousewheel to expand the graph horizontally.
+    Drag the mouse to reposition the dataset, refresh if you get lost and a new dataset will be randomly generated.
 </p>
 </div>
 </body>
@@ -63,7 +69,6 @@ button{
 
   }
 </script>
-<script src=webgl-debug.js></script>
 <script src=PhiloGL.js></script>
 <script src=graph.js?v=0.01></script>
 </html>
