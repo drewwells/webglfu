@@ -23,14 +23,14 @@ function generatePoints( seed, length, max ){
 }
 
 //Take any set of values and make them fit in our window nicely
-function normalizeArray( arr ){
+function normalizeArray( arr, x, y ){
     var maxx = Math.max.apply(Math,arr.filter(function(n,i){ return !(i%2); })),
         maxy = Math.max.apply(Math,arr.filter(function(n,i){ return i%2; }));
 
     for( var i = 0,l = arr.length; i < l; i = i + 2 ){
 
-        arr[ i + 1 ] = arr[ i + 1 ] * 300 / maxy;
-        arr[ i ] = arr[ i ] * 400 / maxx;
+        arr[ i + 1 ] = arr[ i + 1 ] * y / maxy;
+        arr[ i ] = arr[ i ] * x / maxx;
     }
     maxx = 375;
     maxy = 300;
@@ -38,10 +38,10 @@ function normalizeArray( arr ){
 }
 
 //Convert 2 wide matrix to 3 wide matrix, z = 0
-function prepareData( arr, z ){
+function prepareData( arr, x, y, z ){
     var i = 0, cleanArr = [];
     z = z || 0;
-    arr = normalizeArray( arr );
+    arr = normalizeArray( arr, x, y );
 
     for( i = 0; i < arr.length; i = i + 1 ){
         if( i && i % 2 === 0 ){
@@ -53,7 +53,7 @@ function prepareData( arr, z ){
     }
     cleanArr.push( z );
 
-    return injectPoints( cleanArr, true );
+    return injectPoints( cleanArr );
 }
 
 //Prefix every point with a point on the y=0 axis
@@ -158,11 +158,13 @@ function generateColors( length ){
 
 //Generate a new model based on data
 function generateModel( points ){
-    var matrix,//
+    var matrix,
+        iindices,// = Math.floor( matrix.length / 3 ),
         indices,// = prepareIndices( iindices );
         i;
 
-    matrix = prepareData( points || generatePoints() );
+    matrix = prepareData( points || generatePoints(), 400, 300 );
+
     make3d( matrix );
     indices = prepareIndices( matrix.length / 3 );
 
@@ -241,15 +243,49 @@ window.graph3d = function( options ){
     return null;    
 };
 
-var webGLStart = function( canvas, models ) {
+
+function grow( model, fps ){
+    
+    var ratio = 1, vertices = model.$vertices,
+        original = Array.prototype.slice.call( vertices ),
+        fx = easing.easeOutCubic,
+        duration = 80;
+
+    fps = fps || 24;
+
+    function f(){
+
+        ratio = ratio + 1;
+        if( ratio <= duration ){
+            //console.log( ratio );
+            for( var i = 1, l = vertices.length; i < l; i=i+3 ){
+
+                //vertices[i] = original[i] * ratio / 400;
+                vertices[i] = fx( ratio, 0, original[ i ], duration );
+                if( original[i] == 100 ){
+
+                    console.log( i, l, original[i], vertices[i] );
+                }
+            } 
+
+            setTimeout(f, 1000/fps);
+        }
+    }
+    f();
+    
+}
+
+var webGLStart = function( canvas, models) {
     var theta = 0,
         icamera = 1,
-        graph = models, pos;
+        graph = models, pos, fps = 60;
 
     $( 'generate' ).addEventListener('click',function(){
         graph = generateModel();
         updatePosition( graph );
     });
+
+    grow( graph, fps );
 
     PhiloGL(canvas, {
         program: {
@@ -344,6 +380,12 @@ var webGLStart = function( canvas, models ) {
 
             }
 
+            (function tick(){
+
+                drawScene();
+                setTimeout(tick,1000/fps);
+            })();
+
         },
         events: {
             onDragStart: function(e) {
@@ -379,10 +421,10 @@ var webGLStart = function( canvas, models ) {
 
                 if( !e.event.ctrlKey ){
                     graph.position.x += (pos.x - e.x) * camera.aspect / 2.3136792;
-                    graph.position.y += -(pos.y - e.y);
+                    //graph.position.y += -(pos.y - e.y);
                 } else {
                     graph.rotation.x += -(pos.y - e.y)/100;
-                    graph.rotation.y += -(pos.x - e.x)/100;
+                    //graph.rotation.y += -(pos.x - e.x)/100;
                 }
                 pos.x = e.x;
                 pos.y = e.y;
@@ -420,7 +462,6 @@ var webGLStart = function( canvas, models ) {
 
     });
 };
-
 
 //Methods related to build Bezier curve
 function bezier( a, b, c, d, t ){
@@ -488,5 +529,44 @@ function faux( a, b, enda, endb ){
     return ret;
 }
 
+var easing = {
+    // t: current time, b: begInnIng value, c: change In value, d: duration
+    easeOutCubic: function ( t, b, c, d ) {
+	return c * ( ( t = t / d - 1 ) * t * t + 1 ) + b;
+    }
+};
+
+/*
+ *
+ * TERMS OF USE - EASING EQUATIONS
+ *
+ * Open source under the BSD License.
+ *
+ * Copyright 2001 Robert Penner
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * Redistributions of source code must retain the above copyright notice, this list of
+ * conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright notice, this list
+ * of conditions and the following disclaimer in the documentation and/or other materials
+ * provided with the distribution.
+ *
+ * Neither the name of the author nor the names of contributors may be used to endorse
+ * or promote products derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
 
 })();
