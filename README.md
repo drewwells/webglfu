@@ -19,7 +19,7 @@ Currently, it normalizes any dataset to a suitable viewing window.
 * Automatic normalization of any datasets, assumed to be X/Y points
 * Optional Z axis (although only one can be used currently)
 * 3d effects provided by depth of the graph
-* Smooth transitions between points using a [Bézier curve][1].
+* Smooth transitions between points using a [BÃ©zier curve][1].
 
 
 ### Controls:
