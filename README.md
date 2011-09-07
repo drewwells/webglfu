@@ -2,7 +2,7 @@ On a quest to learn WebGLfu.
 
 # [graph3d]
 
-![graph growing effect](images/graph.gif)
+![graph growing effect](https://github.com/drewwells/webglfu/raw/master/images/graph.gif)
 
 This is an extension of most 2d and canvas based graphs like flot.  Now, we can visualize a large number of data points in realtime. This is achieved by using the 3d graphics power of the GPU.  There are initial setup costs related to building the dataset and transforming it into 3-axis points.  Afterwards, panning, zooming, and expanding of the graph is rendered on the GPU.
 
