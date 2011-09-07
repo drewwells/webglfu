@@ -1,1 +1,8 @@
 On a quest to learn WebGLfu.
+
+Graph TODO: 
+
+* Multi-graph: stack multiple plots one behind the other
+* Realtime data: Merge new data points into existing matrix
+* Labels: Provide the user with X/Y feedback (and legend in the case of multimap)
+* Linear and Logarithmic plots
