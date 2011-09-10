@@ -188,7 +188,8 @@ function updatePosition( graph ){
 
     //graph.position.set( -maxx/2 + 15, -maxy*2/3 - 15, graph.position.z );
     //Still can't seem to automatically determine this so using normalize to control it
-    graph.position.set( -180, -215, graph.position.z );
+    graph.position.set( -170, -215, graph.position.z );
+    graph.rotation.set( 0, -0.39, 0 );
 }
 
 var $ =
@@ -262,10 +263,6 @@ function grow( model, fps ){
 
                 //vertices[i] = original[i] * ratio / 400;
                 vertices[i] = fx( ratio, 0, original[ i ], duration );
-                if( original[i] == 100 ){
-
-                    console.log( i, l, original[i], vertices[i] );
-                }
             } 
 
             setTimeout(f, 1000/fps);
@@ -321,7 +318,7 @@ var webGLStart = function( canvas, models) {
             gl.clearDepth( 1 );
             gl.enable (gl.DEPTH_TEST );
             gl.depthFunc( gl.LEQUAL );
-
+            
             camera.view.id();
             updatePosition( graph );
 
@@ -380,12 +377,6 @@ var webGLStart = function( canvas, models) {
 
             }
 
-            (function tick(){
-
-                drawScene();
-                setTimeout(tick,1000/fps);
-            })();
-
         },
         events: {
             onDragStart: function(e) {
@@ -423,8 +414,8 @@ var webGLStart = function( canvas, models) {
                     graph.position.x += (pos.x - e.x) * camera.aspect / 2.3136792;
                     //graph.position.y += -(pos.y - e.y);
                 } else {
-                    graph.rotation.x += -(pos.y - e.y)/100;
-                    //graph.rotation.y += -(pos.x - e.x)/100;
+                    //graph.rotation.x += -(pos.y - e.y)/100;
+                    graph.rotation.y += -(pos.x - e.x)/100;
                 }
                 pos.x = e.x;
                 pos.y = e.y;
