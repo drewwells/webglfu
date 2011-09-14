@@ -1,5 +1,42 @@
 (function(){
 
+/**
+# graph3d
+
+## Options:
+
+ - canvas: id or DOM element to reference
+
+ - datasets: array of datasets
+
+ - colors: array of colors, see
+
+ */
+window.graph3d = function( options ){
+
+    var canvas = options.canvas;
+    if( !canvas ){
+
+        console.log( 'Need a reference to a canvas' );
+    }
+    if( PhiloGL.hasWebGL() === false ){
+
+        if( type( canvas ) === "string" ){
+            canvas = $( canvas );
+        }
+        canvas.innerHTML = "You do not support WebGL";
+    } else {
+
+        if( canvas ){
+
+            options = generateModel( options );
+            return webGLStart( options );
+        }
+    }
+
+    return null;
+};
+
 //Prevent errors if log doesn't existent
 if( !window.console ){
     window.console = {};
@@ -11,7 +48,7 @@ function generatePoints( seed, length, max ){
     var arr = [], val;
     max = max || 100;
     seed = seed || 0;
-    length = length*10 || 400;
+    length = length*10 || 40;
 
     for( var i = seed; i < length; i=i+10 ){
 
@@ -38,15 +75,16 @@ function normalizeArray( arr, x, y ){
 }
 
 //Convert 2 wide matrix to 3 wide matrix, z = 0
-function prepareData( arr, x, y, z ){
+function expandPoints( arr, x, y, z ){
     var i = 0, cleanArr = [];
-    z = z || 0;
+    z = z * 100 || 0;
     arr = normalizeArray( arr, x, y );
 
     for( i = 0; i < arr.length; i = i + 1 ){
+
         if( i && i % 2 === 0 ){
+
             cleanArr.push( z );
-            //console.log( cleanArr[ cleanArr.length - 3], cleanArr[ cleanArr.length - 2],cleanArr[ cleanArr.length - 1 ] );
         }
 
         cleanArr.push ( arr[i] );
@@ -64,11 +102,15 @@ function injectPoints( arr, raw ){
     value;
 
     for( var i = 0, l = arr.length / 3; i < l; i = i + 1 ){
+
         current = [ arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ] ];
+
         if( !raw && i > 0 ){
+
             value = faux( prev, current, i === 1, i === l  );
             ap.push.apply( ret, value );
         }
+
         ret.push( arr[ i*3 ], 0, arr[ i*3 + 2 ],
                  arr[ i*3 ], arr[ i*3 + 1 ], arr[ i*3 + 2 ]);
         prev = current;
@@ -157,16 +199,41 @@ function generateColors( length ){
 }
 
 //Generate a new model based on data
-function generateModel( points ){
-    var matrix,
-        iindices,// = Math.floor( matrix.length / 3 ),
-        indices,// = prepareIndices( iindices );
+function generateModel( options ){
+    var matrix = [],
+        points = options.points,
+        indices = [],
         i;
 
-    matrix = prepareData( points || generatePoints(), 400, 300 );
+    options.models = [];
+    if( points && type( points[0] ) === "array" ){
 
-    make3d( matrix );
-    indices = prepareIndices( matrix.length / 3 );
+        //Multiple x/y planes, iterate over them
+        for( i = 0; i < points.length; i = i + 1 ){
+
+            matrix.push( expandPoints( points[ i ][ 0 ] ? 
+                                      points[ i ] : generatePoints(), 400, 300, i ) );
+            make3d( matrix[ i ] );
+            indices.push( prepareIndices( matrix[ i ].length / 3 ) );
+            options.models.push(
+                new PhiloGL.O3D.Model({
+                    vertices: matrix[ i ],
+                    colors: generateColors( matrix[ i ].length ),
+                    indices: indices[ i ]
+                }));
+        }
+    } else {
+
+        matrix = expandPoints( points || generatePoints(), 400, 300 );
+        make3d( matrix );
+        indices = prepareIndices( matrix.length / 3 );
+        options.models.push(
+            new PhiloGL.O3D.Model({
+                vertices: matrix,
+                colors: generateColors( matrix.length ),
+                indices: indices
+            }));
+    }
 
     //Debug FINAL matrices and indices
     // for( i = 0; i < indices.length; i = i + 3 ){
@@ -176,12 +243,7 @@ function generateModel( points ){
     // for( i = 0; i < matrix.length; i = i + 3 ){
     //     console.log( i/3 + ':', matrix[i], matrix[i+1], matrix[i+2] );
     // }
-
-    return new PhiloGL.O3D.Model({
-        vertices: matrix,
-        colors: generateColors( matrix.length ),
-        indices: indices
-    });
+    return options;
 }
 
 function updatePosition( graph ){
@@ -210,43 +272,9 @@ var $ =
         return typeCache[ _class ] || 'object';
     };
 
-/**
-# graph3d 
-
-## Options:
-
- - canvas: id or DOM element to reference
-
- - datasets: array of datasets 
-
- - colors: array of colors, see 
- 
- */
-window.graph3d = function( options ){
-
-    var canvas = options.canvas;
-    if( !canvas ){
-
-        console.log( 'Need a reference to a canvas' );
-    }
-    if( PhiloGL.hasWebGL() === false ){
-
-        if( type( canvas ) === "string" ){
-            canvas = $( canvas );
-        }
-        canvas.innerHTML = "You do not support WebGL";
-    } else {
-        if( canvas ){
-            return webGLStart( canvas, generateModel( options.points ) );
-        }
-    }
-
-    return null;    
-};
-
 
 function grow( model, fps ){
-    
+
     var ratio = 1, vertices = model.$vertices,
         original = Array.prototype.slice.call( vertices ),
         fx = easing.easeOutCubic,
@@ -263,35 +291,51 @@ function grow( model, fps ){
 
                 //vertices[i] = original[i] * ratio / 400;
                 vertices[i] = fx( ratio, 0, original[ i ], duration );
-            } 
+            }
 
             setTimeout(f, 1000/fps);
         }
     }
     f();
-    
+
 }
 
-var webGLStart = function( canvas, models) {
+function each( array, callback ){
+
+    var i = 0, l = array.length,
+        args = Array.prototype.slice.call( arguments, 2 );
+
+    args.unshift( null );
+    for( ; i < l; i++ ){
+
+        args[ 0 ] = array[ i ];
+        //This is async safe, thanks .slice()
+        callback.apply( array[ i ], args.slice() );
+    }
+}
+
+var webGLStart = function( options ) {
     var theta = 0,
         icamera = 1,
-        graph = models, pos, fps = 60;
+        graph = options.models,
+        i, pos, fps = 60;
 
-    $( 'generate' ).addEventListener('click',function(){
-        graph = generateModel();
-        updatePosition( graph );
-    });
+    //console.log( Array.prototype.slice.call(graph[0].vertices,105,400) );
+    //each( graph, grow, fps );
+    each( graph, updatePosition );
 
-    grow( graph, fps );
+    PhiloGL( options.canvas, {
 
-    PhiloGL(canvas, {
         program: {
+
             from: 'ids',
             vs: 'shader-vs',
             fs: 'shader-fs'
         },
         camera: {
+
             position: {
+
                 x: 0, y: 0, z: -400 * 1.3
             }
         },
@@ -300,6 +344,7 @@ var webGLStart = function( canvas, models) {
             console.log( this, arguments );
         },
         onLoad: function(app) {
+
             var gl = app.gl,
                 canvas = app.canvas,
                 program = app.program,
@@ -308,29 +353,43 @@ var webGLStart = function( canvas, models) {
                 rTri = 0, rSquare = 0,
                 camera = app.camera;
 
+            var count = graph.reduce(function( a, b ){
+
+                return Object.prototype.toString.call( a ) === "[object Object]" ?
+                    a.$verticesLength : a + b.$verticesLength;
+            });
+
+            //Reduce sucks balls for size 1 arrays
+            count = count.$verticesLength || count;
+
             //Allow much further camera
             camera.far = 1000;
             //Aspect based on normalize
             camera.aspect = 0.85;
-            gl.viewport(0, 0, canvas.width, canvas.height);
+            gl.viewport( 0, 0, canvas.width, canvas.height );
             //Scene background color
-            gl.clearColor( 211/255, 200/255, 184/255, 1);
+            gl.clearColor( 211/255, 200/255, 184/255, 1 );
             gl.clearDepth( 1 );
-            gl.enable (gl.DEPTH_TEST );
+            gl.enable( gl.DEPTH_TEST );
             gl.depthFunc( gl.LEQUAL );
-            
             camera.view.id();
-            updatePosition( graph );
+            //updatePosition( graph );
 
-            $( 'rendered' ).innerHTML = 'Vertice Count: ' +
-                Math.floor( graph.$verticesLength / 3 ) * 3;
+            $( 'rendered' ).innerHTML = 'Vertice Count: ' + count;
 
-            scene.add( graph );
+            //scene.add.apply( scene, graph );
+            each( graph, function( g ){
+                console.log( g.$vertices[4] );
+                scene.add( g );
+            });
+
+            // console.log( Array.prototype.slice.call( graph[0].$vertices ) );
+            // console.log( Array.prototype.slice.call(  graph[1].$vertices ) );
 
             (function tick(){
 
                 drawScene();
-                setTimeout(tick,1000/60);
+                setTimeout( tick, 1000/60 );
             })();
 
             function setupElement( elem ){
@@ -350,35 +409,37 @@ var webGLStart = function( canvas, models) {
                         size: 4
                     }
                 });
+
                 //set uniforms
                 program.setUniform('uMVMatrix', view);
                 program.setUniform('uPMatrix', camera.projection);
             }
 
-
             function drawScene(){
 
-                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+                gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
+                each( graph, setupElement );
 
-                setupElement( graph );
+                each( graph, function( graphElement ){
 
-                program.setBuffer('indices', {
-                    value: graph.indices,
-                    bufferType: gl.ELEMENT_ARRAY_BUFFER,
-                    size: 1
+                    program.setBuffer('indices', {
+                        value: graphElement.indices,
+                        bufferType: gl.ELEMENT_ARRAY_BUFFER,
+                        size: 1
+                    });
+
+                    gl.drawElements(
+                        gl.TRIANGLES,
+                        graphElement.indices.length,
+                        gl.UNSIGNED_SHORT, 0 );
                 });
 
-                gl.drawElements(
-                    gl.TRIANGLES,
-                    graph.indices.length,
-                    gl.UNSIGNED_SHORT, 0 );
-
                 camera.update();
-
             }
 
         },
         events: {
+
             onDragStart: function(e) {
 
                 this.pos = {
@@ -395,13 +456,14 @@ var webGLStart = function( canvas, models) {
                 this.dragging = false;
             },
             onDragMove: function(e) {
+
                 var z = this.camera.position.z,
                     camera = this.camera,
                     sign = Math.abs(z) / z,
                     pos = this.pos,
                     x = -(pos.x - e.x) / 100,
                     y = sign * (pos.y - e.y) / 100,
-                    graph = this.scene.models[0];
+                    models = this.scene.models;
 
                 //Due to aspect ratio manipulations X must be calculated based
                 // this aspect ratio;
@@ -411,24 +473,35 @@ var webGLStart = function( canvas, models) {
                 // -2.3294117647 @ 0.4
 
                 if( !e.event.ctrlKey ){
-                    graph.position.x += (pos.x - e.x) * camera.aspect / 2.3136792;
-                    //graph.position.y += -(pos.y - e.y);
+
+                    each( models, function( graph ){
+
+                        graph.position.x += (pos.x - e.x) * camera.aspect / 2.3136792;
+                        //graph.position.y += -(pos.y - e.y);
+                    });
                 } else {
-                    //graph.rotation.x += -(pos.y - e.y)/100;
-                    graph.rotation.y += -(pos.x - e.x)/100;
+                    each( models, function( graph ){
+
+                        //graph.rotation.x += -(pos.y - e.y)/100;
+                        graph.rotation.y += -(pos.x - e.x)/100;
+                    });
                 }
+
                 pos.x = e.x;
                 pos.y = e.y;
 
             },
             onDragEnd: function(e){
+
                 console.log( 'Mouse', e.x,
                              'Graph', this.scene.models[0].position.x,
                              'Camera', this.camera.aspect );
+
                 this.dragging = false;
 
             },
             onMouseWheel: function(e) {
+
                 e.stop();
                 var camera = this.camera;
 
@@ -442,8 +515,9 @@ var webGLStart = function( canvas, models) {
                     }
                     console.log( 'Aspect Ratio:', camera.aspect );
                 } else {
+
                     camera.position.z += e.wheel * 100;
-                    console.log( 'Camera X:', camera.position.x, 
+                    console.log( 'Camera X:', camera.position.x,
                                  'Y:', camera.position.y,
                                  'Z:', camera.position.z );
                 }
@@ -456,21 +530,23 @@ var webGLStart = function( canvas, models) {
 
 //Methods related to build Bezier curve
 function bezier( a, b, c, d, t ){
+
     var a3 = a * 3, b3 = b * 3, c3 = c * 3;
     var ret = a + t*(b3 - a3 + t*(a3-2*b3+c3 + t*(b3-a-c3+d)));
     return ret;
 }
 function bezier3( a, b, c, d, t, dest ){
+
     if( dest == null ) dest = [];
     var x = bezier(a[0], b[0], c[0], d[0], t);
     //Inject a y=0 axis point prior to calculated point
     dest.push( x );
     dest.push( 0 );
-    dest.push( 0 ); //sigh hard coded z axis
+    dest.push( a[2] ); //No smoothing of z-axis
     dest.push( x );
     dest.push( bezier(a[1], b[1], c[1], d[1], t) );
     //dest.push( bezier(a[2], b[2], c[2], d[2], t) ); skipping z for now
-    dest.push( 0 );
+    dest.push( a[2] ); //No smoothing of z-axis
     return dest;
 }
 
@@ -479,6 +555,7 @@ function bezier3( a, b, c, d, t, dest ){
 // Return: array of points for
 // build a curve
 function faux( a, b, enda, endb ){
+
     //Make control points, okay?
     var ret = [],
         cp1 = [ ],
@@ -488,26 +565,31 @@ function faux( a, b, enda, endb ){
 
     //endpoints controlpoint dy
     if( enda ){
+
         cp1.push( a[0] );
         cp1.push( b[1] > a[1] ? b[1] + dy : b[1] - dy );
         cp1.push( a[2] );//only true in flat
     } else {
+
         cp1.push( a[0] + dx );
         cp1.push( a[1] );
         cp1.push( a[2] );//only true in flat
     }
 
     if( endb ){
+
         cp2.push( b[0] );
         cp2.push( b[1] > a[1] ? b[1] - dy : b[1] + dy );
         cp2.push( b[2] );//only true in flat
     } else {
+
         cp2.push( b[0] - dx );
         cp2.push( b[1] );
         cp2.push( b[2] );//only true in flat
     }
 
     for( var i = 1, count = 50; i < count; i++ ){
+
         var t = i / ( count - 1 );
         ap.push.apply( ret, bezier3(
             a,
