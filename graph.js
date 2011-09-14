@@ -48,7 +48,7 @@ function generatePoints( seed, length, max ){
     var arr = [], val;
     max = max || 100;
     seed = seed || 0;
-    length = length*10 || 40;
+    length = length*10 || 400;
 
     for( var i = seed; i < length; i=i+10 ){
 
@@ -77,7 +77,7 @@ function normalizeArray( arr, x, y ){
 //Convert 2 wide matrix to 3 wide matrix, z = 0
 function expandPoints( arr, x, y, z ){
     var i = 0, cleanArr = [];
-    z = z * 100 || 0;
+    z = z * 10 || 0;
     arr = normalizeArray( arr, x, y );
 
     for( i = 0; i < arr.length; i = i + 1 ){
@@ -178,20 +178,37 @@ function make3d( matrix, z ){
 }
 
 //Add colors to the vertices, options? 1: vertices
-function generateColors( length ){
+function generateColors( length, pos ){
     var colors = [],
-        colorsTmpl = [ [ 12/255, 37/255, 56/255, 1 ],
-                       [ 43/255, 67/255, 79/255, 1 ],
-                       [ 99/255,130/255,112/255, 1 ],
-                       [188/255,201/255,142/255, 1 ]
+        colorsTmpl = [ 
+            [ 
+                //Guessing a bit on side of each color
+                [ 12/255, 37/255, 56/255, 1 ], //Front
+                [ 43/255, 67/255, 79/255, 1 ], //Side
+                [ 99/255,130/255,112/255, 1 ], //Top
+                [188/255,201/255,142/255, 1 ]  //Bottom
+            ],
+            [
+                [ 219/255, 158/255, 54/255, 1 ],
+                [ 255/255, 211/255, 78/255, 1 ],
+                [ 189/255,  73/255, 50/255, 1 ],
+                [ 189/255,  73/255, 50/255, 1 ]
+            ],
+            [
+                [ 204/255, 161/255, 100/255, 1 ],
+                [ 171/255, 152/255, 119/255, 1 ],
+                [ 212/255, 193/255, 155/255, 1 ],
+                [  54/255,  36/255,  40/255, 1 ]
+            ]
                      ],
         i,j;
-
+    pos = pos || 0;
+    pos = pos % 3;
     for( j = 0; j < 4; j = j + 1 ){
         for( i = 0;
              i < length / 4;
              i = i + 3 ){
-                 ap.push.apply( colors, colorsTmpl[ j ] );
+                 ap.push.apply( colors, colorsTmpl[ pos ][ j ] );
         }
     }
 
@@ -218,7 +235,7 @@ function generateModel( options ){
             options.models.push(
                 new PhiloGL.O3D.Model({
                     vertices: matrix[ i ],
-                    colors: generateColors( matrix[ i ].length ),
+                    colors: generateColors( matrix[ i ].length, i ),
                     indices: indices[ i ]
                 }));
         }
@@ -250,7 +267,7 @@ function updatePosition( graph ){
 
     //graph.position.set( -maxx/2 + 15, -maxy*2/3 - 15, graph.position.z );
     //Still can't seem to automatically determine this so using normalize to control it
-    graph.position.set( -170, -215, graph.position.z );
+    graph.position.set( -150, -215, graph.position.z );
     graph.rotation.set( 0, -0.39, 0 );
 }
 
@@ -379,7 +396,7 @@ var webGLStart = function( options ) {
 
             //scene.add.apply( scene, graph );
             each( graph, function( g ){
-                console.log( g.$vertices[4] );
+
                 scene.add( g );
             });
 
@@ -418,10 +435,10 @@ var webGLStart = function( options ) {
             function drawScene(){
 
                 gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-                each( graph, setupElement );
 
                 each( graph, function( graphElement ){
 
+                    setupElement( graphElement );
                     program.setBuffer('indices', {
                         value: graphElement.indices,
                         bufferType: gl.ELEMENT_ARRAY_BUFFER,
