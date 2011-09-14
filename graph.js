@@ -338,7 +338,7 @@ var webGLStart = function( options ) {
         i, pos, fps = 60;
 
     //console.log( Array.prototype.slice.call(graph[0].vertices,105,400) );
-    //each( graph, grow, fps );
+    each( graph, grow, fps );
     each( graph, updatePosition );
 
     PhiloGL( options.canvas, {
