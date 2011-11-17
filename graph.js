@@ -180,8 +180,8 @@ function make3d( matrix, z ){
 //Add colors to the vertices, options? 1: vertices
 function generateColors( length, pos ){
     var colors = [],
-        colorsTmpl = [ 
-            [ 
+        colorsTmpl = [
+            [
                 //Guessing a bit on side of each color
                 [ 12/255, 37/255, 56/255, 1 ], //Front
                 [ 43/255, 67/255, 79/255, 1 ], //Side
@@ -228,7 +228,7 @@ function generateModel( options ){
         //Multiple x/y planes, iterate over them
         for( i = 0; i < points.length; i = i + 1 ){
 
-            matrix.push( expandPoints( points[ i ][ 0 ] ? 
+            matrix.push( expandPoints( points[ i ][ 0 ] ?
                                       points[ i ] : generatePoints(), 400, 300, i ) );
             make3d( matrix[ i ] );
             indices.push( prepareIndices( matrix[ i ].length / 3 ) );
@@ -341,6 +341,16 @@ var webGLStart = function( options ) {
     each( graph, grow, fps );
     each( graph, updatePosition );
 
+    var plane = new PhiloGL.O3D.Plane({
+        type: 'x,y',
+        offset: 31,
+        xlen: 375,
+        ylen: 300,
+        nx: 5,
+        ny: 5,
+        colors: [0.55,1,1,1]
+    });
+
     PhiloGL( options.canvas, {
 
         program: {
@@ -369,7 +379,7 @@ var webGLStart = function( options ) {
                 view = new PhiloGL.Mat4(),
                 rTri = 0, rSquare = 0,
                 camera = app.camera;
-
+window.scene = scene;
             var count = graph.reduce(function( a, b ){
 
                 return Object.prototype.toString.call( a ) === "[object Object]" ?
@@ -390,11 +400,12 @@ var webGLStart = function( options ) {
             gl.enable( gl.DEPTH_TEST );
             gl.depthFunc( gl.LEQUAL );
             camera.view.id();
-            //updatePosition( graph );
+
 
             $( 'rendered' ).innerHTML = 'Vertice Count: ' + count;
 
-            //scene.add.apply( scene, graph );
+            updatePosition( plane );
+            scene.add( plane );
             each( graph, function( g ){
 
                 scene.add( g );
@@ -435,7 +446,7 @@ var webGLStart = function( options ) {
             function drawScene(){
 
                 gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-
+                setupElement( plane );
                 each( graph, function( graphElement ){
 
                     setupElement( graphElement );
@@ -450,7 +461,7 @@ var webGLStart = function( options ) {
                         graphElement.indices.length,
                         gl.UNSIGNED_SHORT, 0 );
                 });
-
+                scene.render();
                 camera.update();
             }
 
@@ -518,6 +529,12 @@ var webGLStart = function( options ) {
 
             },
             onMouseWheel: function(e) {
+                e.stop();
+                var camera = this.camera;
+                camera.position.z += e.wheel;
+                camera.update();
+            },
+            aonMouseWheel: function(e) {
 
                 e.stop();
                 var camera = this.camera;
