@@ -180,8 +180,8 @@ function make3d( matrix, z ){
 //Add colors to the vertices, options? 1: vertices
 function generateColors( length, pos ){
     var colors = [],
-        colorsTmpl = [ 
-            [ 
+        colorsTmpl = [
+            [
                 //Guessing a bit on side of each color
                 [ 12/255, 37/255, 56/255, 1 ], //Front
                 [ 43/255, 67/255, 79/255, 1 ], //Side
@@ -228,7 +228,7 @@ function generateModel( options ){
         //Multiple x/y planes, iterate over them
         for( i = 0; i < points.length; i = i + 1 ){
 
-            matrix.push( expandPoints( points[ i ][ 0 ] ? 
+            matrix.push( expandPoints( points[ i ][ 0 ] ?
                                       points[ i ] : generatePoints(), 400, 300, i ) );
             make3d( matrix[ i ] );
             indices.push( prepareIndices( matrix[ i ].length / 3 ) );
