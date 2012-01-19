@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body{
+  font-family: 'HelveticaRegular',arial,sans-serif;
+}
+#content{
+width: 800px;
+}
+p,button{
+float: left;
+margin: 0.5em 1em 0 1em;
+/*line-height: 1.25em;*/
+}
+button{
+
+}
+
+</style>
+</head>
+<body>
+<div id="content">
+    <canvas id="canvas" width="800" height="400">Your browser doesn't support canvas.</canvas>
+
+<p id="rendered" style="margin-left: 40em;"></p>
+<button style="display:none;" id="generate">Generate new graph</button>
+
+<div style="clear:both;">
+    <h3>Controls:</h3>
+    <ul>
+        <li>Ctrl + Left mouse: rotate graph</li>
+        <li>Shift + Mouse wheel: to zoom in/out</li>
+        <li>Mouse wheel: expand/contract graph</li>
+    </ul>
+</div>
+<p>
+    Tip: Use the mousewheel to expand the graph horizontally.
+    Drag the mouse to reposition the dataset, refresh if you get lost and a new dataset will be randomly generated.
+</p>
+</div>
+</body>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+
+    varying lowp vec4 vColor;
+
+    void main(void) {
+      //gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+
+      gl_FragColor = vColor;
+    }
+</script>
+<script id="shader-vs" type="x-shader/x-vertex">
+  attribute vec3 aVertexPosition;
+  attribute vec4 aVertexColor;
+
+  uniform mat4 uMVMatrix;
+  uniform mat4 uPMatrix;
+
+  varying lowp vec4 vColor;
+
+  void main(void) {
+    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+    vColor = aVertexColor;
+
+  }
+</script>
+<script src=PhiloGL.js></script>
+<script src=graph.js></script>
+<script>
+var a = [1,2,3,4,5,6,7,8,9];
+var graph = graph3d({
+    canvas: 'canvas',
+    points:a
+});
+</script>
+</html>

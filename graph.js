@@ -62,16 +62,17 @@ function generatePoints( seed, length, max ){
 //Take any set of values and make them fit in our window nicely
 function normalizeArray( arr, x, y ){
     var maxx = Math.max.apply(Math,arr.filter(function(n,i){ return !(i%2); })),
-        maxy = Math.max.apply(Math,arr.filter(function(n,i){ return i%2; }));
+        maxy = Math.max.apply(Math,arr.filter(function(n,i){ return i%2; })),
+        ret = [];
 
     for( var i = 0,l = arr.length; i < l; i = i + 2 ){
 
-        arr[ i + 1 ] = arr[ i + 1 ] * y / maxy;
-        arr[ i ] = arr[ i ] * x / maxx;
+        ret[ i + 1 ] = arr[ i + 1 ] * y / maxy;
+        ret[ i ] = arr[ i ] * x / maxx;
     }
     maxx = 375;
     maxy = 300;
-    return arr;
+    return ret;
 }
 
 //Convert 2 wide matrix to 3 wide matrix, z = 0
@@ -334,7 +335,22 @@ function each( array, callback ){
 var webGLStart = function( options ) {
     var theta = 0,
         icamera = 1,
-        graph = options.models,
+        model = Object.create({
+                update: function( points ){
+
+                    this.options = generateModel( this.options );
+                    var models = this.options.models;
+                    for( var i = 0; i < models.length; i++ ){
+                        ['$colors','$indices','$vertices'].forEach(function( x ){
+
+                            graph[ i ][ x ] = models[ i ][ x ];
+                        });
+                        graph[ i ].update();
+                    }
+                },
+                options: options
+        }),
+        graph = model.options.models,
         i, pos, fps = 60;
 
     //console.log( Array.prototype.slice.call(graph[0].vertices,105,400) );
@@ -543,6 +559,8 @@ var webGLStart = function( options ) {
         }
 
     });
+
+    return model;
 };
 
 //Methods related to build Bezier curve
