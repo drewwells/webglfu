@@ -1,0 +1,1 @@
+rsync -vaz . drew@drewwells:/home/drew/www/graph3d --exclude '.git'
